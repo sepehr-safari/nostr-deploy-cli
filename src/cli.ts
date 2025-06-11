@@ -26,8 +26,9 @@ program
 program
   .command('config')
   .description('Configure deployment settings')
-  .option('-r, --relays <relays...>', 'Nostr relay URLs')
+  .option('-r, --relays <relays...>', 'Nostr relay URLs (comma-separated or multiple values)')
   .option('-b, --blossom <url>', 'Blossom server URL')
+  .option('-d, --domain <domain>', 'Base domain for subdomains')
   .action(configCommand);
 
 // Deploy command

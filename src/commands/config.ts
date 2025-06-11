@@ -13,8 +13,15 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 
     // Handle command line options
     if (options.relays) {
-      await config.setNostrRelays(options.relays);
-      console.log(chalk.green(`✅ Updated Nostr relays (${options.relays.length} relays)`));
+      // Handle both comma-separated and space-separated relays
+      const relayList = options.relays
+        .flatMap((relay) =>
+          relay.includes(',') ? relay.split(',').map((r) => r.trim()) : [relay.trim()]
+        )
+        .filter((relay) => relay.length > 0);
+
+      await config.setNostrRelays(relayList);
+      console.log(chalk.green(`✅ Updated Nostr relays (${relayList.length} relays)`));
     }
 
     if (options.blossom) {
@@ -22,8 +29,21 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
       console.log(chalk.green(`✅ Updated Blossom server: ${options.blossom}`));
     }
 
+    if (options.domain) {
+      const updatedConfig = config.getConfig();
+      if (updatedConfig.deployment) {
+        updatedConfig.deployment.baseDomain = options.domain;
+      } else {
+        updatedConfig.deployment = {
+          baseDomain: options.domain,
+        };
+      }
+      await config.updateConfig(updatedConfig);
+      console.log(chalk.green(`✅ Updated base domain: ${options.domain}`));
+    }
+
     // If no options provided, run interactive configuration
-    if (!options.relays && !options.blossom) {
+    if (!options.relays && !options.blossom && !options.domain) {
       console.log(chalk.white('Current configuration:'));
       console.log(
         chalk.gray('  Nostr relays: '),
@@ -41,6 +61,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
           name: 'settings',
           message: 'What would you like to configure?',
           choices: [
+            { name: '📡 Nostr Relays', value: 'relays' },
             { name: '🌸 Blossom Server', value: 'blossom' },
             { name: '🌐 Base Domain', value: 'domain' },
           ],
