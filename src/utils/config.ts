@@ -46,11 +46,7 @@ export class ConfigManager {
         this.config = {
           nostr: {
             publicKey: '',
-            relays: ['wss://nos.lol', 'wss://ditto.pub/relay', 'wss://relay.damus.io'],
-            pow: {
-              enabled: true,
-              targetDifficulty: 30,
-            },
+            relays: ['wss://ditto.pub/relay', 'wss://relay.damus.io'],
           },
           blossom: {
             serverUrl: 'https://cdn.hzrd149.com',
@@ -72,10 +68,6 @@ export class ConfigManager {
       nostr: {
         publicKey: '',
         relays: [],
-        pow: {
-          enabled: true,
-          targetDifficulty: 30,
-        },
       },
       blossom: { serverUrl: '' },
       deployment: { baseDomain: '' },
@@ -103,24 +95,7 @@ export class ConfigManager {
             config.nostr.relays = cleanValue ? cleanValue.split(',').map((r) => r.trim()) : [];
           }
           break;
-        case 'NOSTR_POW_ENABLED':
-          if (config.nostr) {
-            if (!config.nostr.pow) config.nostr.pow = { enabled: true, targetDifficulty: 30 };
-            config.nostr.pow.enabled = cleanValue.toLowerCase() === 'true';
-          }
-          break;
-        case 'NOSTR_POW_DIFFICULTY':
-          if (config.nostr) {
-            if (!config.nostr.pow) config.nostr.pow = { enabled: true, targetDifficulty: 30 };
-            config.nostr.pow.targetDifficulty = parseInt(cleanValue, 10) || 30;
-          }
-          break;
-        case 'NOSTR_POW_TIMEOUT':
-          if (config.nostr) {
-            if (!config.nostr.pow) config.nostr.pow = { enabled: true, targetDifficulty: 30 };
-            config.nostr.pow.timeout = parseInt(cleanValue, 10) || undefined;
-          }
-          break;
+
         case 'BLOSSOM_SERVER_URL':
           if (config.blossom) config.blossom.serverUrl = cleanValue;
           break;
@@ -149,17 +124,6 @@ export class ConfigManager {
     }
     if (this.config.nostr?.relays && this.config.nostr.relays.length > 0) {
       lines.push(`NOSTR_RELAYS=${this.config.nostr.relays.join(',')}`);
-    }
-
-    lines.push('');
-    lines.push('# Proof of Work Configuration');
-
-    // Always add PoW configuration with defaults
-    const powConfig = this.config.nostr?.pow || { enabled: true, targetDifficulty: 30 };
-    lines.push(`NOSTR_POW_ENABLED=${powConfig.enabled}`);
-    lines.push(`NOSTR_POW_DIFFICULTY=${powConfig.targetDifficulty}`);
-    if (powConfig.timeout) {
-      lines.push(`NOSTR_POW_TIMEOUT=${powConfig.timeout}`);
     }
 
     lines.push('');
@@ -215,22 +179,6 @@ export class ConfigManager {
       this.config.nostr = { publicKey: '', relays: [] };
     }
     this.config.nostr.relays = relays;
-    await this.saveConfig();
-  }
-
-  public async setNostrPow(
-    enabled: boolean,
-    targetDifficulty: number,
-    timeout?: number
-  ): Promise<void> {
-    if (!this.config.nostr) {
-      this.config.nostr = { publicKey: '', relays: [] };
-    }
-    this.config.nostr.pow = {
-      enabled,
-      targetDifficulty,
-      timeout,
-    };
     await this.saveConfig();
   }
 

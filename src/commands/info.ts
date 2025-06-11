@@ -76,20 +76,6 @@ export async function infoCommand(): Promise<void> {
       console.log(chalk.white('  📡 Relays: ') + chalk.red('❌ Not configured'));
     }
 
-    // Show PoW configuration
-    const powConfig = userConfig.nostr?.pow;
-    if (powConfig?.enabled) {
-      console.log(chalk.white('  ⚡ Proof of Work: ') + chalk.green('✅ Enabled'));
-      console.log(
-        chalk.white('    Difficulty: ') + chalk.gray(powConfig.targetDifficulty.toString())
-      );
-      if (powConfig.timeout) {
-        console.log(chalk.white('    Timeout: ') + chalk.gray(`${powConfig.timeout}ms`));
-      }
-    } else {
-      console.log(chalk.white('  ⚡ Proof of Work: ') + chalk.gray('Disabled'));
-    }
-
     console.log(chalk.white('\nDeployment Configuration:'));
     if (userConfig.blossom?.serverUrl) {
       console.log(chalk.white('  🌸 Blossom Server: ') + chalk.green('✅ Configured'));

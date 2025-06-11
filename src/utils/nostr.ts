@@ -2,7 +2,6 @@ import {
   finalizeEvent,
   generateSecretKey,
   getPublicKey,
-  nip13,
   nip19,
   Event as NostrEvent,
   SimplePool,
@@ -54,56 +53,6 @@ export class NostrManager {
     }
   }
 
-  /**
-   * Add proof-of-work to an event using NIP-13
-   */
-  private async addProofOfWork(
-    event: any,
-    targetDifficulty: number,
-    timeout?: number
-  ): Promise<any> {
-    console.log(`⚡ Mining proof-of-work with difficulty ${targetDifficulty}...`);
-    const startTime = Date.now();
-
-    try {
-      // Create a timeout promise if timeout is specified
-      if (timeout) {
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('PoW computation timed out')), timeout);
-        });
-
-        const powEvent = await Promise.race([
-          nip13.minePow(event, targetDifficulty),
-          timeoutPromise,
-        ]);
-
-        const elapsed = Date.now() - startTime;
-        const actualDifficulty = nip13.getPow((powEvent as any).id);
-
-        console.log(`✅ PoW completed in ${elapsed}ms with difficulty ${actualDifficulty}`);
-        return powEvent;
-      } else {
-        const powEvent = await nip13.minePow(event, targetDifficulty);
-        const elapsed = Date.now() - startTime;
-        const actualDifficulty = nip13.getPow(powEvent.id);
-
-        console.log(`✅ PoW completed in ${elapsed}ms with difficulty ${actualDifficulty}`);
-        return powEvent;
-      }
-    } catch (error) {
-      const elapsed = Date.now() - startTime;
-      console.log(`❌ PoW failed after ${elapsed}ms: ${error}`);
-      throw new Error(`Failed to mine proof-of-work: ${error}`);
-    }
-  }
-
-  /**
-   * Validate and get the proof-of-work difficulty of an event
-   */
-  public validateProofOfWork(eventId: string): number {
-    return nip13.getPow(eventId);
-  }
-
   public async publishEvent(
     content: string,
     kind: number = 1,
@@ -127,28 +76,8 @@ export class NostrManager {
       pubkey: getPublicKey(privateKeyBytes),
     };
 
-    let eventToSign = unsignedEvent;
-
-    // Add proof-of-work if enabled in configuration
-    if (userConfig.nostr.pow?.enabled && userConfig.nostr.pow.targetDifficulty >= 0) {
-      try {
-        console.log(
-          `🔨 Proof-of-work enabled with target difficulty ${userConfig.nostr.pow.targetDifficulty}`
-        );
-        eventToSign = await this.addProofOfWork(
-          unsignedEvent,
-          userConfig.nostr.pow.targetDifficulty,
-          userConfig.nostr.pow.timeout
-        );
-      } catch (error) {
-        console.warn(`⚠️  PoW failed, publishing without PoW: ${error}`);
-        // Continue with original event if PoW fails
-        eventToSign = unsignedEvent;
-      }
-    }
-
     // Finalize the event (add id and signature)
-    const event = finalizeEvent(eventToSign, privateKeyBytes);
+    const event = finalizeEvent(unsignedEvent, privateKeyBytes);
 
     const relays = userConfig.nostr.relays || [];
     if (relays.length === 0) {

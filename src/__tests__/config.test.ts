@@ -28,7 +28,7 @@ describe('ConfigManager', () => {
   it('should have default configuration when not configured', async () => {
     const config = configManager.getConfig();
     expect(config).toBeDefined();
-    expect(config.nostr?.relays).toContain('wss://nos.lol');
+    expect(config.nostr?.relays).toContain('wss://ditto.pub/relay');
   });
 
   it('should identify when configuration is incomplete', async () => {

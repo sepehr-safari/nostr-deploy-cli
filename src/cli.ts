@@ -35,10 +35,6 @@ program
   .option('-r, --relays <relays...>', 'Nostr relay URLs (comma-separated or multiple values)')
   .option('-b, --blossom <url>', 'Blossom server URL')
   .option('-d, --domain <domain>', 'Base domain for subdomains')
-  .option('--pow', 'Enable proof-of-work for published events')
-  .option('--no-pow', 'Disable proof-of-work for published events')
-  .option('--pow-difficulty <difficulty>', 'Set proof-of-work target difficulty (0-30)', parseInt)
-  .option('--pow-timeout <timeout>', 'Set proof-of-work timeout in milliseconds', parseInt)
   .action(configCommand);
 
 // Info command
@@ -92,7 +88,6 @@ program
     console.log(
       chalk.white('Configure relays: ') + chalk.green('nostr-deploy-cli config --relays <urls>')
     );
-    console.log(chalk.white('Disable PoW: ') + chalk.green('nostr-deploy-cli config --no-pow'));
     console.log('');
     console.log(chalk.yellow('Fast Deploy:'));
     console.log(

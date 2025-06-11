@@ -2,11 +2,6 @@ export interface NostrConfig {
   privateKey?: string;
   publicKey: string;
   relays: string[];
-  pow?: {
-    enabled: boolean;
-    targetDifficulty: number;
-    timeout?: number; // Timeout in milliseconds for PoW computation
-  };
 }
 
 export interface BlossomConfig {
@@ -47,9 +42,6 @@ export interface ConfigOptions {
   relays?: string[];
   blossom?: string;
   domain?: string;
-  pow?: boolean;
-  powDifficulty?: number;
-  powTimeout?: number;
 }
 
 export interface StatusOptions {
