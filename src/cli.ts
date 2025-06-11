@@ -2,18 +2,23 @@
 
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { authCommand } from './commands/auth';
 import { configCommand } from './commands/config';
 import { deployCommand } from './commands/deploy';
 import { infoCommand } from './commands/info';
 import { statusCommand } from './commands/status';
 
+// Read version from package.json
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf8'));
+
 const program = new Command();
 
 program
   .name('nostr-deploy-cli')
   .description('Deploy static sites using Nostr protocol and Blossom servers')
-  .version('1.0.0');
+  .version(packageJson.version);
 
 // Authentication command
 program
