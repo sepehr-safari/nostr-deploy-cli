@@ -41,7 +41,7 @@ async function performAutoSetup(): Promise<void> {
 
       // Still ensure other configuration is set up with defaults if missing
       if (!userConfig.nostr?.relays || userConfig.nostr.relays.length === 0) {
-        const defaultRelays = ['wss://ditto.pub/relay', 'wss://relay.damus.io'];
+        const defaultRelays = ['wss://relay.nostr.band'];
         await config.setNostrRelays(defaultRelays);
         console.log(chalk.green('✅ Set up default Nostr relays'));
       }
@@ -79,7 +79,7 @@ async function performAutoSetup(): Promise<void> {
   await config.setNostrKey(keyPair.privateKey, keyPair.publicKey);
 
   // Set up minimal configuration with defaults
-  const defaultRelays = ['wss://ditto.pub/relay', 'wss://relay.damus.io'];
+  const defaultRelays = ['wss://relay.nostr.band'];
   await config.setNostrRelays(defaultRelays);
 
   // Set up minimal blossom config with a default server

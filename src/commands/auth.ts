@@ -190,7 +190,7 @@ export async function authCommand(options: AuthOptions): Promise<void> {
           type: 'input',
           name: 'relays',
           message: 'Enter relay URLs (comma-separated):',
-          default: 'wss://ditto.pub/relay,wss://relay.damus.io',
+          default: 'wss://relay.nostr.band',
           filter: (input: string) => input.split(',').map((r) => r.trim()),
         },
       ]);

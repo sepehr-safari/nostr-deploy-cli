@@ -56,7 +56,7 @@ Interactive configuration:
 ⚙️  Deployment Configuration
 
 Current configuration:
-  Nostr relays: wss://relay.damus.io, wss://ditto.pub/relay, wss://relay.nostr.band
+  Nostr relays: wss://relay.nostr.band
   Blossom server: Not configured
   Base domain: Not configured
 

@@ -46,7 +46,7 @@ export class ConfigManager {
         this.config = {
           nostr: {
             publicKey: '',
-            relays: ['wss://ditto.pub/relay', 'wss://relay.damus.io'],
+            relays: ['wss://relay.nostr.band'],
           },
           blossom: {
             serverUrl: 'https://cdn.hzrd149.com',

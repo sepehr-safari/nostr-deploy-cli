@@ -266,7 +266,7 @@ Configuration is stored locally in each project directory as `.env.nostr-deploy.
 # Nostr Authentication
 NOSTR_PRIVATE_KEY=your-hex-private-key
 NOSTR_PUBLIC_KEY=your-hex-public-key
-NOSTR_RELAYS=wss://relay.damus.io,wss://ditto.pub/relay,wss://relay.nostr.band
+NOSTR_RELAYS=wss://relay.nostr.band
 
 # Blossom File Storage
 BLOSSOM_SERVER_URL=https://blossom.hzrd149.com
