@@ -17,12 +17,10 @@ export class DeploymentManager {
   private config: ConfigManager | null = null;
   private blossom: BlossomManager;
   private nostr: NostrManager;
-  private deploymentServiceUrl: string;
 
   constructor() {
     this.blossom = new BlossomManager();
     this.nostr = new NostrManager();
-    this.deploymentServiceUrl = 'https://api.nostrdeploy.com'; // Production service URL
   }
 
   private async getConfig(): Promise<ConfigManager> {
@@ -165,21 +163,6 @@ export class DeploymentManager {
     const config = await this.getConfig();
     const userConfig = config.getConfig();
     return userConfig.deployment?.baseDomain || 'nostrdeploy.com';
-  }
-
-  public async deleteDeployment(npubSubdomain: string): Promise<void> {
-    try {
-      const config = await this.getConfig();
-      const userConfig = config.getConfig();
-      // This would call your deployment service to remove the subdomain
-      await axios.delete(`${this.deploymentServiceUrl}/api/deployment/${npubSubdomain}`, {
-        headers: {
-          Authorization: `Nostr ${userConfig.nostr?.publicKey}`,
-        },
-      });
-    } catch (error) {
-      throw new Error(`Failed to delete deployment: ${error}`);
-    }
   }
 
   /**
