@@ -146,10 +146,11 @@ nostr-deploy-cli deploy --skip-setup
 
 This will:
 
-- 🔐 Auto-generate a new Nostr keypair
-- ⚙️ Set up default configuration (relays, Blossom server, domain)
-- 💾 Display your keys for you to save securely
-- 🚀 Deploy immediately to your new npub subdomain
+- 🔍 Check for existing authentication configuration in the project
+- 🔄 Reuse existing keypair if found, or auto-generate a new one if needed
+- ⚙️ Set up default configuration (relays, Blossom server, domain) for missing settings
+- 💾 Display keys for you to save securely (if newly generated)
+- 🚀 Deploy immediately to your npub subdomain
 
 **Important:** Save the generated private key (nsec) securely! You'll need it for future deployments.
 
@@ -215,7 +216,7 @@ Deploy your static site using Pubkey Static Websites NIP
 **Options:**
 
 - `-d, --dir <directory>` - Build directory (default: auto-detect)
-- `--skip-setup` - Skip auth and config steps, auto-generate keypair and deploy
+- `--skip-setup` - Skip auth and config steps, reuse existing config or auto-generate keypair and deploy
 
 **Examples:**
 

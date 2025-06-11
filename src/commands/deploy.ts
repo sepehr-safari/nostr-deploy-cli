@@ -11,7 +11,60 @@ async function performAutoSetup(): Promise<void> {
   const config = await ConfigManager.getInstance();
   const nostr = new NostrManager();
 
-  console.log(chalk.cyan('\n🔐 Auto-generating Nostr keypair for deployment...\n'));
+  console.log(chalk.cyan('\n🔐 Skip-setup mode: Checking for existing configuration...\n'));
+
+  // Check if there's already local configuration
+  const hasLocalConfig = await config.hasLocalConfig();
+
+  if (hasLocalConfig) {
+    const userConfig = config.getConfig();
+
+    // Check if we have existing auth configuration (either private key or public key)
+    if (userConfig.nostr?.publicKey || userConfig.nostr?.privateKey) {
+      console.log(chalk.green('✅ Found existing authentication configuration!'));
+
+      if (userConfig.nostr.privateKey) {
+        console.log(chalk.blue('🔑 Reusing existing private key for deployment'));
+        // Try to get the npub for display
+        try {
+          const npub = await nostr.getNpubSubdomain();
+          console.log(chalk.white('Public Key (npub): ') + chalk.blue(npub));
+        } catch (error) {
+          console.log(
+            chalk.yellow('⚠️  Could not display npub, but proceeding with existing keys')
+          );
+        }
+      } else if (userConfig.nostr.publicKey) {
+        console.log(chalk.blue('🔍 Reusing existing public key (read-only mode)'));
+        console.log(chalk.yellow('⚠️  Note: Public key only - cannot sign new deployments'));
+      }
+
+      // Still ensure other configuration is set up with defaults if missing
+      if (!userConfig.nostr?.relays || userConfig.nostr.relays.length === 0) {
+        const defaultRelays = ['wss://nos.lol', 'wss://ditto.pub/relay', 'wss://relay.damus.io'];
+        await config.setNostrRelays(defaultRelays);
+        console.log(chalk.green('✅ Set up default Nostr relays'));
+      }
+
+      if (!userConfig.blossom?.serverUrl) {
+        await config.setBlossomServer('https://blossom.primal.net');
+        console.log(chalk.green('✅ Set up default Blossom server'));
+      }
+
+      if (!userConfig.deployment?.baseDomain) {
+        await config.setBaseDomain('nostrdeploy.com');
+        console.log(chalk.green('✅ Set up default base domain'));
+      }
+
+      console.log(chalk.green('✅ Existing configuration ready for deployment!'));
+      return;
+    }
+  }
+
+  // No existing auth config found, generate new keypair
+  console.log(
+    chalk.yellow('⚡ No existing auth config found - auto-generating new Nostr keypair...\n')
+  );
 
   // Generate new keypair
   const keyPair = nostr.generateKeyPair();

@@ -43,7 +43,10 @@ program
   .command('deploy')
   .description('Deploy your static site')
   .option('-d, --dir <directory>', 'Directory to deploy (default: ./build or ./dist)')
-  .option('--skip-setup', 'Skip auth and config steps, auto-generate keypair and deploy')
+  .option(
+    '--skip-setup',
+    'Skip auth and config steps, reuse existing config or auto-generate keypair and deploy'
+  )
   .action(deployCommand);
 
 // Status command
