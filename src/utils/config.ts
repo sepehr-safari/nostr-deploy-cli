@@ -1,18 +1,17 @@
 import * as fs from 'fs-extra';
-import * as os from 'os';
 import * as path from 'path';
 import { UserConfig } from '../types';
 
-const CONFIG_DIR = path.join(os.homedir(), '.nostr-deploy-cli');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+const CONFIG_FILE = '.env.nostr-deploy';
 
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: Partial<UserConfig> = {};
   private initialized = false;
+  private projectPath: string;
 
   private constructor() {
-    // Don't call loadConfig here since constructor can't be async
+    this.projectPath = process.cwd();
   }
 
   public static async getInstance(): Promise<ConfigManager> {
@@ -28,13 +27,22 @@ export class ConfigManager {
     return ConfigManager.instance;
   }
 
+  public getConfigPath(): string {
+    return path.join(this.projectPath, CONFIG_FILE);
+  }
+
+  public async hasLocalConfig(): Promise<boolean> {
+    return await fs.pathExists(this.getConfigPath());
+  }
+
   private async loadConfig(): Promise<void> {
     try {
-      if (await fs.pathExists(CONFIG_FILE)) {
-        const configData = await fs.readJSON(CONFIG_FILE);
-        this.config = configData;
+      const configPath = this.getConfigPath();
+      if (await fs.pathExists(configPath)) {
+        const envContent = await fs.readFile(configPath, 'utf-8');
+        this.config = this.parseEnvFile(envContent);
       } else {
-        // Create default config
+        // Create default config structure (don't save to file)
         this.config = {
           nostr: {
             publicKey: '',
@@ -47,7 +55,6 @@ export class ConfigManager {
             baseDomain: 'nostrdeploy.com',
           },
         };
-        await this.saveConfig();
       }
     } catch (error) {
       console.error('Error loading config:', error);
@@ -55,10 +62,90 @@ export class ConfigManager {
     }
   }
 
+  private parseEnvFile(content: string): Partial<UserConfig> {
+    const lines = content.split('\n');
+    const config: Partial<UserConfig> = {
+      nostr: { publicKey: '', relays: [] },
+      blossom: { serverUrl: '' },
+      deployment: { baseDomain: '' },
+    };
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('#')) continue;
+
+      const [key, ...valueParts] = trimmedLine.split('=');
+      const value = valueParts.join('=').trim();
+
+      // Remove quotes if present
+      const cleanValue = value.replace(/^["']|["']$/g, '');
+
+      switch (key?.trim()) {
+        case 'NOSTR_PRIVATE_KEY':
+          if (config.nostr) config.nostr.privateKey = cleanValue;
+          break;
+        case 'NOSTR_PUBLIC_KEY':
+          if (config.nostr) config.nostr.publicKey = cleanValue;
+          break;
+        case 'NOSTR_RELAYS':
+          if (config.nostr) {
+            config.nostr.relays = cleanValue ? cleanValue.split(',').map((r) => r.trim()) : [];
+          }
+          break;
+        case 'BLOSSOM_SERVER_URL':
+          if (config.blossom) config.blossom.serverUrl = cleanValue;
+          break;
+        case 'BASE_DOMAIN':
+          if (config.deployment) config.deployment.baseDomain = cleanValue;
+          break;
+      }
+    }
+
+    return config;
+  }
+
+  private generateEnvContent(): string {
+    const lines: string[] = [];
+    lines.push('# Nostr Deploy CLI Configuration');
+    lines.push('# This file contains sensitive information - do not commit to version control');
+    lines.push('');
+
+    // Nostr configuration
+    lines.push('# Nostr Authentication');
+    if (this.config.nostr?.privateKey) {
+      lines.push(`NOSTR_PRIVATE_KEY=${this.config.nostr.privateKey}`);
+    }
+    if (this.config.nostr?.publicKey) {
+      lines.push(`NOSTR_PUBLIC_KEY=${this.config.nostr.publicKey}`);
+    }
+    if (this.config.nostr?.relays && this.config.nostr.relays.length > 0) {
+      lines.push(`NOSTR_RELAYS=${this.config.nostr.relays.join(',')}`);
+    }
+
+    lines.push('');
+
+    // Blossom configuration
+    lines.push('# Blossom File Storage');
+    if (this.config.blossom?.serverUrl) {
+      lines.push(`BLOSSOM_SERVER_URL=${this.config.blossom.serverUrl}`);
+    }
+
+    lines.push('');
+
+    // Deployment configuration
+    lines.push('# Deployment Settings');
+    if (this.config.deployment?.baseDomain) {
+      lines.push(`BASE_DOMAIN=${this.config.deployment.baseDomain}`);
+    }
+
+    return lines.join('\n') + '\n';
+  }
+
   public async saveConfig(): Promise<void> {
     try {
-      await fs.ensureDir(CONFIG_DIR);
-      await fs.writeJSON(CONFIG_FILE, this.config, { spaces: 2 });
+      const configPath = this.getConfigPath();
+      const envContent = this.generateEnvContent();
+      await fs.writeFile(configPath, envContent, 'utf-8');
     } catch (error) {
       console.error('Error saving config:', error);
       throw error;

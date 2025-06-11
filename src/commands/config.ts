@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import * as path from 'path';
 import { ConfigOptions } from '../types';
 import { ConfigManager } from '../utils/config';
 
@@ -7,7 +8,20 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
   const config = await ConfigManager.getInstance();
 
   try {
+    const projectName = path.basename(process.cwd());
+    const hasLocalConfig = await config.hasLocalConfig();
+
     console.log(chalk.cyan('\n⚙️  Deployment Configuration\n'));
+    console.log(chalk.white('Project: ') + chalk.yellow(projectName));
+    console.log(chalk.white('Config: ') + chalk.gray(config.getConfigPath()));
+
+    if (!hasLocalConfig) {
+      console.log(chalk.yellow('\n⚠️  No local configuration found for this project.'));
+      console.log(chalk.white('You need to set up authentication first:'));
+      console.log(chalk.green('  nostr-deploy-cli auth'));
+      console.log(chalk.white('Then you can configure deployment settings.'));
+      return;
+    }
 
     const currentConfig = config.getConfig();
 
@@ -42,24 +56,27 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
       console.log(chalk.green(`✅ Updated base domain: ${options.domain}`));
     }
 
-    // If no options provided, run interactive configuration
+    // If no command line options provided, show interactive configuration
     if (!options.relays && !options.blossom && !options.domain) {
-      console.log(chalk.white('Current configuration:'));
+      console.log(chalk.white('\nCurrent project configuration:'));
       console.log(
-        chalk.gray('  Nostr relays: '),
-        currentConfig.nostr?.relays?.join(', ') || 'Not configured'
+        chalk.white('  Nostr relays: ') +
+          chalk.gray(currentConfig.nostr?.relays?.join(', ') || 'Not configured')
       );
       console.log(
-        chalk.gray('  Blossom server: '),
-        currentConfig.blossom?.serverUrl || 'Not configured'
+        chalk.white('  Blossom server: ') +
+          chalk.gray(currentConfig.blossom?.serverUrl || 'Not configured')
       );
-      console.log('');
+      console.log(
+        chalk.white('  Base domain: ') +
+          chalk.gray(currentConfig.deployment?.baseDomain || 'Not configured')
+      );
 
       const configChoice = await inquirer.prompt([
         {
           type: 'checkbox',
           name: 'settings',
-          message: 'What would you like to configure?',
+          message: 'What would you like to configure for this project?',
           choices: [
             { name: '📡 Nostr Relays', value: 'relays' },
             { name: '🌸 Blossom Server', value: 'blossom' },
@@ -68,25 +85,40 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
         },
       ]);
 
+      if (configChoice.settings.length === 0) {
+        console.log(chalk.yellow('\n⏸️  No changes made.'));
+        return;
+      }
+
       if (configChoice.settings.includes('relays')) {
         const relaysInput = await inquirer.prompt([
           {
             type: 'input',
-            name: 'relays',
+            name: 'relayUrls',
             message: 'Enter Nostr relay URLs (comma-separated):',
             default:
               currentConfig.nostr?.relays?.join(', ') ||
               'wss://nos.lol,wss://ditto.pub/relay,wss://relay.damus.io',
-            filter: (input: string) =>
-              input
-                .split(',')
-                .map((r) => r.trim())
-                .filter((r) => r.length > 0),
+            filter: (input: string) => input.split(',').map((r) => r.trim()),
+            validate: (input: string[]) => {
+              if (input.length === 0) return 'Please enter at least one relay URL';
+              const validUrls = input.every((url) => {
+                try {
+                  const parsed = new URL(url);
+                  return parsed.protocol === 'wss:' || parsed.protocol === 'ws:';
+                } catch {
+                  return false;
+                }
+              });
+              return validUrls || 'Please enter valid WebSocket URLs (wss:// or ws://)';
+            },
           },
         ]);
 
-        await config.setNostrRelays(relaysInput.relays);
-        console.log(chalk.green(`✅ Updated Nostr relays (${relaysInput.relays.length} relays)`));
+        await config.setNostrRelays(relaysInput.relayUrls);
+        console.log(
+          chalk.green(`✅ Updated Nostr relays (${relaysInput.relayUrls.length} relays)`)
+        );
       }
 
       if (configChoice.settings.includes('blossom')) {
@@ -119,12 +151,10 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
             message: 'Enter base domain:',
             default: currentConfig.deployment?.baseDomain || 'nostrdeploy.com',
             validate: (input: string) => {
-              try {
-                new URL(input);
-                return true;
-              } catch {
-                return 'Please enter a valid domain';
-              }
+              // Basic domain validation
+              const domainPattern =
+                /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+              return domainPattern.test(input) || 'Please enter a valid domain name';
             },
           },
         ]);
@@ -144,12 +174,16 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 
     // Check if configuration is complete
     if (config.isConfigured()) {
-      console.log(chalk.cyan('\n🎉 Configuration complete!'));
+      console.log(chalk.cyan('\n🎉 Project configuration complete!'));
       console.log(
-        chalk.white('You can now deploy sites using: ') + chalk.green('nostr-deploy-cli deploy')
+        chalk.white('You can now deploy sites from this project using: ') +
+          chalk.green('nostr-deploy-cli deploy')
+      );
+      console.log(
+        chalk.white('View complete project info with: ') + chalk.green('nostr-deploy-cli info')
       );
     } else {
-      console.log(chalk.yellow('\n⚠️  Configuration incomplete.'));
+      console.log(chalk.yellow('\n⚠️  Project configuration incomplete.'));
       console.log(chalk.white('Make sure to configure:'));
 
       const currentConfig = config.getConfig();
@@ -159,6 +193,8 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
       if (!currentConfig.blossom?.serverUrl) {
         console.log(chalk.white('  • Blossom server URL'));
       }
+
+      console.log(chalk.white('  • View current status: ') + chalk.green('nostr-deploy-cli info'));
     }
   } catch (error) {
     console.error(chalk.red(`\n❌ Configuration failed: ${error}`));

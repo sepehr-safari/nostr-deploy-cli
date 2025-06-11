@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import * as path from 'path';
 import { StatusOptions } from '../types';
 import { ConfigManager } from '../utils/config';
 import { DeploymentManager } from '../utils/deployment';
@@ -8,10 +9,24 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
   const deployment = new DeploymentManager();
 
   try {
+    const projectName = path.basename(process.cwd());
     console.log(chalk.cyan('\n📊 Deployment Status\n'));
+    console.log(chalk.white('Project: ') + chalk.yellow(projectName));
+
+    const hasLocalConfig = await config.hasLocalConfig();
+    if (!hasLocalConfig) {
+      console.log(chalk.red('❌ No local configuration found for this project!'));
+      console.log(chalk.white('This project needs to be set up before you can check status.'));
+      console.log(
+        chalk.white('Please run: ') +
+          chalk.green('nostr-deploy-cli auth') +
+          chalk.white(' to set up authentication')
+      );
+      return;
+    }
 
     if (!config.isConfigured()) {
-      console.log(chalk.red('❌ Configuration incomplete!'));
+      console.log(chalk.red('❌ Project configuration incomplete!'));
       console.log(
         chalk.white('Please run: ') +
           chalk.green('nostr-deploy-cli auth') +
@@ -63,30 +78,32 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
       }
     } else {
       // List all deployments using new NIP format
-      console.log(chalk.blue('📋 Fetching your deployment history from Nostr...'));
+      console.log(chalk.blue('📋 Fetching deployment history from Nostr for this project...'));
 
       try {
         const deployments = await deployment.listUserDeployments();
         const currentNpub = await deployment.getCurrentNpubSubdomain();
+        const userConfig = config.getConfig();
+        const baseDomain = userConfig.deployment?.baseDomain || 'nostrdeploy.com';
 
         if (deployments.length === 0) {
-          console.log(chalk.yellow('\n📭 No deployments found.'));
+          console.log(chalk.yellow('\n📭 No deployments found for this project.'));
           console.log(
             chalk.white('Deploy your first site with: ') + chalk.green('nostr-deploy-cli deploy')
           );
           console.log(
             chalk.white('Your sites will be available at: ') +
-              chalk.cyan(`${currentNpub}.nostrdeploy.com`)
+              chalk.cyan(`${currentNpub}.${baseDomain}`)
           );
           return;
         }
 
-        console.log(chalk.green(`\nFound ${deployments.length} deployment(s):\n`));
+        console.log(chalk.green(`\nFound ${deployments.length} deployment(s) for this project:\n`));
 
         deployments.forEach((dep, index) => {
           console.log(chalk.white(`${index + 1}. Deployment`));
           console.log(
-            chalk.white('   📍 URL: ') + chalk.cyan(`https://${currentNpub}.nostrdeploy.com`)
+            chalk.white('   📍 URL: ') + chalk.cyan(`https://${currentNpub}.${baseDomain}`)
           );
           console.log(chalk.white('   📅 Deployed: ') + chalk.gray(dep.createdAt.toLocaleString()));
           console.log(chalk.white('   📁 Files: ') + chalk.yellow(dep.files.length.toString()));
@@ -106,14 +123,21 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
         );
         console.log(chalk.white('• Deploy new site: ') + chalk.green('nostr-deploy-cli deploy'));
         console.log(
-          chalk.white('• Your npub subdomain: ') + chalk.cyan(`${currentNpub}.nostrdeploy.com`)
+          chalk.white('• Your npub subdomain: ') + chalk.cyan(`${currentNpub}.${baseDomain}`)
         );
       } catch (error) {
-        console.error(chalk.red(`❌ Failed to fetch deployment history: ${error}`));
+        console.error(chalk.red(`❌ Failed to fetch deployments: ${error}`));
+        console.log(
+          chalk.yellow("\n💡 This might be normal if you haven't deployed anything yet.")
+        );
+        console.log(
+          chalk.white('Deploy your first site with: ') + chalk.green('nostr-deploy-cli deploy')
+        );
       }
     }
   } catch (error) {
-    console.error(chalk.red(`❌ Error: ${error}`));
+    console.error(chalk.red(`\n❌ Status check failed: ${error}`));
+    process.exit(1);
   }
 }
 
@@ -122,9 +146,9 @@ function getStatusIcon(status: string): string {
     case 'active':
       return '✅';
     case 'inactive':
-      return '❌';
+      return '🔴';
     case 'error':
-      return '⚠️';
+      return '❌';
     default:
       return '❓';
   }

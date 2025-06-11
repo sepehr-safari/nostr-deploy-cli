@@ -1,6 +1,6 @@
 {
   "name": "nostr-deploy-cli",
-  "version": "0.4.5",
+  "version": "0.5.0",
   "description": "A CLI tool for deploying static sites using Nostr protocol and Blossom servers to nostrdeploy.com subdomains",
   "main": "dist/index.js",
   "bin": {

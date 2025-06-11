@@ -5,6 +5,7 @@ import { Command } from 'commander';
 import { authCommand } from './commands/auth';
 import { configCommand } from './commands/config';
 import { deployCommand } from './commands/deploy';
+import { infoCommand } from './commands/info';
 import { statusCommand } from './commands/status';
 
 const program = new Command();
@@ -31,6 +32,12 @@ program
   .option('-d, --domain <domain>', 'Base domain for subdomains')
   .action(configCommand);
 
+// Info command
+program
+  .command('info')
+  .description('Show local project configuration and authentication status')
+  .action(infoCommand);
+
 // Deploy command
 program
   .command('deploy')
@@ -56,11 +63,23 @@ program
     console.log(
       chalk.white('A decentralized static site deployment tool using Nostr and Blossom servers.\n')
     );
+    console.log(chalk.yellow('Each project has its own local configuration and Nostr identity.\n'));
 
     console.log(chalk.yellow('Quick Start:'));
-    console.log(chalk.white('1. Authenticate: ') + chalk.green('nostr-deploy-cli auth'));
-    console.log(chalk.white('2. Configure: ') + chalk.green('nostr-deploy-cli config'));
-    console.log(chalk.white('3. Deploy: ') + chalk.green('nostr-deploy-cli deploy'));
+    console.log(
+      chalk.white('1. Set up project authentication: ') + chalk.green('nostr-deploy-cli auth')
+    );
+    console.log(
+      chalk.white('2. Configure project settings: ') + chalk.green('nostr-deploy-cli config')
+    );
+    console.log(
+      chalk.white('3. View project configuration: ') + chalk.green('nostr-deploy-cli info')
+    );
+    console.log(chalk.white('4. Deploy your site: ') + chalk.green('nostr-deploy-cli deploy'));
+    console.log('');
+
+    console.log(chalk.gray('💡 Note: Configuration is stored locally in .env.nostr-deploy file'));
+    console.log(chalk.gray('   Each project can have its own Nostr identity and settings'));
     console.log('');
 
     program.help();
@@ -78,7 +97,7 @@ program.on('command:*', () => {
 });
 
 // Parse command line arguments
-program.parse();
+program.parse(process.argv);
 
 // Show help if no command provided
 if (!process.argv.slice(2).length) {

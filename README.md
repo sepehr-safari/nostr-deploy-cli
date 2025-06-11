@@ -78,35 +78,53 @@ npm unlink -g nostr-deploy-cli
 
 ### Initial Setup
 
-1. **Authenticate with Nostr:**
+**Each project has its own local configuration and Nostr identity.**
+
+1. **Navigate to your project directory:**
+
+```bash
+cd your-project-directory
+```
+
+2. **Set up authentication for this project:**
 
 ```bash
 nostr-deploy-cli auth
 ```
 
-Your npub will become your subdomain: `npub1abc123....nostrdeploy.com`
+Your project's npub will become your subdomain: `npub1abc123....nostrdeploy.com`
 
-2. **Configure deployment settings:**
+3. **Configure deployment settings for this project:**
 
 ```bash
 nostr-deploy-cli config
 ```
 
-3. **Deploy your first site:**
+4. **View your project's configuration:**
 
 ```bash
-cd your-react-app
+nostr-deploy-cli info
+```
+
+5. **Deploy your site:**
+
+```bash
+# Build your site first (if needed)
 npm run build
+
+# Deploy to your project's npub subdomain
 nostr-deploy-cli deploy
 ```
 
 Your site is now live at `https://npub1abc123....nostrdeploy.com`!
 
+**Note:** Each project directory has its own `.env.nostr-deploy` configuration file with its own Nostr identity. This allows you to deploy different projects to different npub subdomains.
+
 ## 📋 Commands
 
 ### `nostr-deploy-cli auth`
 
-Set up Nostr authentication
+Set up Nostr authentication for the current project
 
 **Options:**
 
@@ -116,19 +134,30 @@ Set up Nostr authentication
 **Examples:**
 
 ```bash
-# Interactive setup - generates new keys and shows your npub subdomain
+# Interactive setup - generates new keys for this project
 nostr-deploy-cli auth
 
-# Import existing private key
+# Import existing private key for this project
 nostr-deploy-cli auth -k nsec1abc123...
 
 # Import public key only (read-only mode)
 nostr-deploy-cli auth -p npub1xyz789...
 ```
 
+### `nostr-deploy-cli info`
+
+Display local project configuration and authentication status
+
+**Examples:**
+
+```bash
+# View current project's configuration
+nostr-deploy-cli info
+```
+
 ### `nostr-deploy-cli config`
 
-Configure deployment settings
+Configure deployment settings for the current project
 
 **Options:**
 
@@ -139,10 +168,10 @@ Configure deployment settings
 **Examples:**
 
 ```bash
-# Interactive configuration
+# Interactive configuration for this project
 nostr-deploy-cli config
 
-# Set specific options
+# Set specific options for this project
 nostr-deploy-cli config -b https://blossom.hzrd149.com -d nostrdeploy.com
 ```
 
@@ -158,7 +187,7 @@ Deploy your static site using Pubkey Static Websites NIP
 **Examples:**
 
 ```bash
-# Auto-detect build directory and deploy to your npub subdomain
+# Auto-detect build directory and deploy to this project's npub subdomain
 nostr-deploy-cli deploy
 
 # Specify build directory
@@ -170,7 +199,7 @@ nostr-deploy-cli deploy -n "My Blog"
 
 ### `nostr-deploy-cli status`
 
-Check deployment status for your npub subdomain
+Check deployment status for your project's npub subdomain
 
 **Options:**
 
@@ -179,32 +208,40 @@ Check deployment status for your npub subdomain
 **Examples:**
 
 ```bash
-# List all your deployments
+# List all deployments for this project
 nostr-deploy-cli status
 
-# Check your npub subdomain status
+# Check specific npub subdomain status
 nostr-deploy-cli status -s npub1abc123...
 ```
 
 ## 🔧 Configuration
 
-Configuration is stored in `~/.nostr-deploy-cli/config.json`:
+Configuration is stored locally in each project directory as `.env.nostr-deploy`:
 
-```json
-{
-  "nostr": {
-    "privateKey": "hex-encoded-private-key",
-    "publicKey": "hex-encoded-public-key",
-    "relays": ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
-  },
-  "blossom": {
-    "serverUrl": "https://blossom.hzrd149.com"
-  },
-  "deployment": {
-    "baseDomain": "nostrdeploy.com"
-  }
-}
+```bash
+# Nostr Deploy CLI Configuration
+# This file contains sensitive information - do not commit to version control
+
+# Nostr Authentication
+NOSTR_PRIVATE_KEY=your-hex-private-key
+NOSTR_PUBLIC_KEY=your-hex-public-key
+NOSTR_RELAYS=wss://relay.damus.io,wss://nos.lol,wss://relay.nostr.band
+
+# Blossom File Storage
+BLOSSOM_SERVER_URL=https://blossom.hzrd149.com
+
+# Deployment Settings
+BASE_DOMAIN=nostrdeploy.com
 ```
+
+**Important Notes:**
+
+- Each project has its own `.env.nostr-deploy` configuration file
+- The `.env.nostr-deploy` file should be included in `.gitignore`
+- Different projects can use different Nostr identities and settings
+- Private keys are stored locally and never shared between projects
+- Environment variable format makes it easy to integrate with CI/CD pipelines
 
 ## 📡 Nostr Events Published
 

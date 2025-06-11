@@ -14,19 +14,55 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
   try {
     console.log(chalk.cyan('\n🚀 Starting Deployment\n'));
 
+    const projectName = path.basename(process.cwd());
+    console.log(chalk.white('Project: ') + chalk.yellow(projectName));
+
     // Check if user is authenticated and configured
-    if (!config.isConfigured()) {
-      console.log(chalk.red('❌ Configuration incomplete!'));
+    const hasLocalConfig = await config.hasLocalConfig();
+    if (!hasLocalConfig) {
+      console.log(chalk.red('❌ No local configuration found for this project!'));
+      console.log(chalk.white('This project needs to be set up before you can deploy.'));
       console.log(chalk.white('Please run the following commands first:'));
       console.log(
         chalk.white('  1. ') +
           chalk.green('nostr-deploy-cli auth') +
-          chalk.white(' - Set up authentication')
+          chalk.white(' - Set up authentication for this project')
       );
       console.log(
         chalk.white('  2. ') +
           chalk.green('nostr-deploy-cli config') +
           chalk.white(' - Configure deployment settings')
+      );
+      console.log(
+        chalk.white('  3. ') +
+          chalk.green('nostr-deploy-cli info') +
+          chalk.white(' - View project configuration')
+      );
+      return;
+    }
+
+    if (!config.isConfigured()) {
+      console.log(chalk.red('❌ Project configuration incomplete!'));
+      console.log(chalk.white('Please run the following commands to complete setup:'));
+      const userConfig = config.getConfig();
+      if (!userConfig.nostr?.publicKey) {
+        console.log(
+          chalk.white('  • ') +
+            chalk.green('nostr-deploy-cli auth') +
+            chalk.white(' - Set up authentication')
+        );
+      }
+      if (!userConfig.blossom?.serverUrl) {
+        console.log(
+          chalk.white('  • ') +
+            chalk.green('nostr-deploy-cli config') +
+            chalk.white(' - Configure deployment settings')
+        );
+      }
+      console.log(
+        chalk.white('  • ') +
+          chalk.green('nostr-deploy-cli info') +
+          chalk.white(' - View current configuration')
       );
       return;
     }
@@ -60,51 +96,49 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       return;
     }
 
-    const indexPath = path.join(buildDir, 'index.html');
-    if (!(await fs.pathExists(indexPath))) {
-      console.log(chalk.red(`❌ No index.html found in: ${buildDir}`));
-      console.log(chalk.white('Make sure your build directory contains a valid static site.'));
+    const files = await fs.readdir(buildDir);
+    if (files.length === 0) {
+      console.log(chalk.red(`❌ Build directory is empty: ${buildDir}`));
       return;
     }
 
-    // Get site name
-    const siteName = options.name || (await getSiteNameFromPackageJson()) || 'My Site';
-    console.log(chalk.blue(`📝 Site name: ${siteName}`));
+    console.log(chalk.blue(`📄 Found ${files.length} files to deploy`));
 
-    // Start deployment process
+    // Start deployment
     spinner = ora('Preparing deployment...').start();
 
     try {
       const result = await deployment.deployStaticSite(buildDir, {
-        siteName,
+        siteName: options.name,
         customSubdomain: options.subdomain,
       });
 
       spinner.succeed('Deployment completed successfully!');
 
-      console.log(chalk.cyan('\n🎉 Deployment Complete!\n'));
-      console.log(chalk.white('📍 Site URL: ') + chalk.green(`https://${result.fullUrl}`));
-      console.log(chalk.white('🔑 NPub Subdomain: ') + chalk.blue(result.npubSubdomain));
-      console.log(chalk.white('📁 Files deployed: ') + chalk.yellow(result.fileCount.toString()));
-      console.log(
-        chalk.white('📡 Static file events: ') +
-          chalk.gray(result.staticFileEventIds.length.toString())
-      );
-      console.log(
-        chalk.white('🌸 User servers event: ') +
-          chalk.gray(result.userServersEventId.substring(0, 16) + '...')
-      );
-      console.log(chalk.white('⏰ Deployed at: ') + chalk.gray(result.deployedAt.toLocaleString()));
+      console.log(chalk.green('\n🎉 Deployment Successful!\n'));
+      console.log(chalk.white('Deployment Details:'));
+      console.log(chalk.white('  🌐 URL: ') + chalk.cyan(`https://${result.fullUrl}`));
+      console.log(chalk.white('  🔑 NPub Subdomain: ') + chalk.blue(result.npubSubdomain));
+      console.log(chalk.white('  📅 Deployed: ') + chalk.gray(result.deployedAt.toLocaleString()));
+      console.log(chalk.white('  📁 Files: ') + chalk.yellow(result.fileCount.toString()));
 
-      console.log(chalk.cyan('\n📊 Next Steps:'));
-      console.log(chalk.white('• Visit your site: ') + chalk.green(`https://${result.fullUrl}`));
-      console.log(
-        chalk.white('• Check deployment status: ') +
-          chalk.green(`nostr-deploy-cli status -s ${result.npubSubdomain}`)
-      );
-      console.log(chalk.white('• View all deployments: ') + chalk.green('nostr-deploy-cli status'));
+      if (result.staticFileEventIds && result.staticFileEventIds.length > 0) {
+        console.log(chalk.white('  📡 Static File Events:'));
+        result.staticFileEventIds.forEach((eventId: string, index: number) => {
+          console.log(
+            chalk.white(`    ${index + 1}. `) + chalk.gray(eventId.substring(0, 16) + '...')
+          );
+        });
+      }
 
-      console.log(chalk.cyan('\n🔗 About Pubkey Static Websites:'));
+      if (result.userServersEventId) {
+        console.log(
+          chalk.white('  🌸 User Servers Event: ') +
+            chalk.gray(result.userServersEventId.substring(0, 16) + '...')
+        );
+      }
+
+      console.log(chalk.cyan('\n📖 About this deployment:'));
       console.log(
         chalk.white('Your site is deployed using the Pubkey Static Websites NIP standard.')
       );
@@ -131,7 +165,7 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       console.log(
         chalk.yellow('\n💡 Tip: Run ') +
           chalk.green('nostr-deploy-cli auth') +
-          chalk.yellow(' to set up authentication.')
+          chalk.yellow(' to set up authentication for this project.')
       );
     }
 

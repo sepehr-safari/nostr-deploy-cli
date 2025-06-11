@@ -101,7 +101,7 @@ $RECYCLE.BIN/
 
 # Configuration files (contains sensitive data)
 config.json
-.nostr-deploy/
+.env.nostr-deploy
 .nostr-deploy-cli/
 
 # Test files

@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import * as path from 'path';
 import { AuthOptions } from '../types';
 import { ConfigManager } from '../utils/config';
 import { NostrManager } from '../utils/nostr';
@@ -9,7 +10,38 @@ export async function authCommand(options: AuthOptions): Promise<void> {
   const nostr = new NostrManager();
 
   try {
+    const projectName = path.basename(process.cwd());
+    const hasLocalConfig = await config.hasLocalConfig();
+
     console.log(chalk.cyan('\n🔐 Nostr Authentication Setup\n'));
+    console.log(chalk.white('Project: ') + chalk.yellow(projectName));
+    console.log(chalk.white('Config: ') + chalk.gray(config.getConfigPath()));
+
+    if (hasLocalConfig) {
+      const userConfig = config.getConfig();
+      if (userConfig.nostr?.publicKey) {
+        console.log(chalk.yellow('\n⚠️  This project already has authentication configured.'));
+
+        const overwrite = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'continue',
+            message: 'Do you want to reconfigure authentication for this project?',
+            default: false,
+          },
+        ]);
+
+        if (!overwrite.continue) {
+          console.log(
+            chalk.blue('\n📋 To view current configuration, run: ') +
+              chalk.green('nostr-deploy-cli info')
+          );
+          return;
+        }
+      }
+    }
+
+    console.log(chalk.cyan('\n🚀 Setting up local authentication for this project...\n'));
 
     let privateKey = options.key;
     let publicKey = options.pubkey;
@@ -37,6 +69,7 @@ export async function authCommand(options: AuthOptions): Promise<void> {
         console.log(chalk.white('Public Key (npub): ') + chalk.blue(keyPair.npub));
         console.log(chalk.yellow('\n⚠️  IMPORTANT: Save your private key (nsec) securely!'));
         console.log(chalk.yellow('⚠️  You will need it to authenticate and deploy sites.'));
+        console.log(chalk.yellow('⚠️  This key pair is specific to this project.'));
 
         const confirmSave = await inquirer.prompt([
           {
@@ -105,13 +138,15 @@ export async function authCommand(options: AuthOptions): Promise<void> {
 
         await config.setNostrKey(privateKeyHex, publicKeyHex);
 
-        console.log(chalk.green('\n✅ Private key configured successfully!'));
-        console.log(chalk.blue('🔑 You can now deploy and manage sites.'));
+        console.log(chalk.green('\n✅ Private key configured successfully for this project!'));
+        console.log(chalk.blue('🔑 You can now deploy and manage sites from this project.'));
 
         // Show the npub for reference
         const npub = await nostr.getNpubSubdomain();
+        const baseDomain = config.getConfig().deployment?.baseDomain || 'nostrdeploy.com';
         console.log(
-          chalk.white('📍 Your sites will be deployed to: ') + chalk.cyan(`${npub}.nostrdeploy.com`)
+          chalk.white('📍 Sites from this project will be deployed to: ') +
+            chalk.cyan(`${npub}.${baseDomain}`)
         );
       } catch (error) {
         console.error(chalk.red(`\n❌ Error configuring private key: ${error}`));
@@ -127,7 +162,7 @@ export async function authCommand(options: AuthOptions): Promise<void> {
         const publicKeyHex = Buffer.from(parsed.data).toString('hex');
         await config.setNostrKey('', publicKeyHex);
 
-        console.log(chalk.green('\n✅ Public key configured successfully!'));
+        console.log(chalk.green('\n✅ Public key configured successfully for this project!'));
         console.log(
           chalk.yellow(
             '⚠️  Note: With public key only, you can view deployments but cannot deploy new sites.'
@@ -144,7 +179,7 @@ export async function authCommand(options: AuthOptions): Promise<void> {
       {
         type: 'confirm',
         name: 'configureRelays',
-        message: 'Would you like to configure Nostr relays?',
+        message: 'Would you like to configure Nostr relays for this project?',
         default: false,
       },
     ]);
@@ -164,14 +199,20 @@ export async function authCommand(options: AuthOptions): Promise<void> {
       console.log(chalk.green(`\n✅ Configured ${relaysInput.relays.length} relays`));
     }
 
-    console.log(chalk.cyan('\n🎉 Authentication setup complete!'));
+    console.log(chalk.cyan('\n🎉 Local authentication setup complete!'));
     console.log(chalk.white('Next steps:'));
     console.log(
       chalk.white('  1. Configure deployment settings: ') + chalk.green('nostr-deploy-cli config')
     );
     console.log(
-      chalk.white('  2. Deploy your first site: ') + chalk.green('nostr-deploy-cli deploy')
+      chalk.white('  2. View project configuration: ') + chalk.green('nostr-deploy-cli info')
     );
+    console.log(
+      chalk.white('  3. Deploy your first site: ') + chalk.green('nostr-deploy-cli deploy')
+    );
+
+    console.log(chalk.gray('\n💡 Note: This configuration is local to this project directory.'));
+    console.log(chalk.gray('   Other projects will need their own authentication setup.'));
   } catch (error) {
     console.error(chalk.red(`\n❌ Authentication failed: ${error}`));
     process.exit(1);
