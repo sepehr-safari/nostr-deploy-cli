@@ -201,8 +201,7 @@ Configuration is stored in `~/.nostr-deploy-cli/config.json`:
     "serverUrl": "https://blossom.hzrd149.com"
   },
   "deployment": {
-    "baseDomain": "nostrdeploy.com",
-    "dnsProvider": "cloudflare"
+    "baseDomain": "nostrdeploy.com"
   }
 }
 ```

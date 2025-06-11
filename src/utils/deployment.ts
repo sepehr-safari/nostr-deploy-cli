@@ -235,7 +235,7 @@ export class DeploymentManager {
     try {
       const config = await this.getConfig();
       const userConfig = config.getConfig();
-      // This would call your deployment service to remove the subdomain and DNS records
+      // This would call your deployment service to remove the subdomain
       await axios.delete(`${this.deploymentServiceUrl}/api/deployment/${npubSubdomain}`, {
         headers: {
           Authorization: `Nostr ${userConfig.nostr?.publicKey}`,

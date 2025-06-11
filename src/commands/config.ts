@@ -43,7 +43,6 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
           choices: [
             { name: '🌸 Blossom Server', value: 'blossom' },
             { name: '🌐 Base Domain', value: 'domain' },
-            { name: '📡 DNS Provider', value: 'dns' },
           ],
         },
       ]);
@@ -119,30 +118,6 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
         }
         await config.updateConfig(updatedConfig);
         console.log(chalk.green(`✅ Updated base domain: ${domainInput.baseDomain}`));
-      }
-
-      if (configChoice.settings.includes('dns')) {
-        const dnsInput = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'provider',
-            message: 'Choose DNS provider:',
-            choices: [{ name: '☁️  Cloudflare (Requires API key)', value: 'cloudflare' }],
-            default: currentConfig.deployment?.dnsProvider || 'cloudflare',
-          },
-        ]);
-
-        const updatedConfig = config.getConfig();
-        if (updatedConfig.deployment) {
-          updatedConfig.deployment.dnsProvider = dnsInput.provider as 'cloudflare';
-        } else {
-          updatedConfig.deployment = {
-            baseDomain: 'nostrdeploy.com',
-            dnsProvider: dnsInput.provider as 'cloudflare',
-          };
-        }
-        await config.updateConfig(updatedConfig);
-        console.log(chalk.green(`✅ Updated DNS provider: ${dnsInput.provider}`));
       }
     }
 

@@ -11,7 +11,6 @@ export interface BlossomConfig {
 
 export interface DeploymentConfig {
   baseDomain: string;
-  dnsProvider?: 'cloudflare';
 }
 
 export interface UserConfig {

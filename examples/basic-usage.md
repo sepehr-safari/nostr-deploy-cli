@@ -60,7 +60,6 @@ Current configuration:
 ? What would you like to configure?
 ❯ ◉ 🌸 Blossom Server
   ◉ 🌐 Base Domain
-  ◯ 📡 DNS Provider
 
 ? Enter Blossom server URL: https://blossom.hzrd149.com
 ✅ Updated Blossom server: https://blossom.hzrd149.com
@@ -270,11 +269,11 @@ nostr-deploy-cli config -d mydomain.com
 
 ## Troubleshooting
 
-### NPub Too Long for DNS
+### NPub Too Long for Subdomains
 
-NPub subdomains are quite long. If you encounter DNS issues:
+NPub subdomains are quite long. If you encounter issues:
 
-1. Ensure your DNS provider supports long subdomains
+1. Ensure your hosting service supports long subdomains
 2. Consider using a shorter custom domain if you control the host server
 3. The CLI handles this automatically for nostrdeploy.com
 
