@@ -273,6 +273,11 @@ BLOSSOM_SERVER_URL=https://blossom.hzrd149.com
 
 # Deployment Settings
 BASE_DOMAIN=nostrdeploy.com
+
+# Proof of Work (Optional)
+NOSTR_POW_ENABLED=false
+NOSTR_POW_DIFFICULTY=30
+NOSTR_POW_TIMEOUT=30000
 ```
 
 **Important Notes:**
@@ -282,6 +287,79 @@ BASE_DOMAIN=nostrdeploy.com
 - Different projects can use different Nostr identities and settings
 - Private keys are stored locally and never shared between projects
 - Environment variable format makes it easy to integrate with CI/CD pipelines
+
+## ⚡ Proof of Work (PoW) Support
+
+This CLI implements **NIP-13 Proof of Work** to help prevent spam on Nostr relays that require a minimum PoW for event acceptance.
+
+### Configuring PoW
+
+**Interactive Configuration:**
+
+```bash
+# Configure PoW interactively
+nostr-deploy-cli config
+# Select "⚡ Proof of Work" option
+```
+
+**Command Line Configuration:**
+
+```bash
+# Enable PoW with default difficulty (30)
+nostr-deploy-cli config --pow
+
+# Enable PoW with custom difficulty
+nostr-deploy-cli config --pow --pow-difficulty 25
+
+# Disable PoW
+nostr-deploy-cli config --no-pow
+
+# Set PoW with timeout (30 seconds)
+nostr-deploy-cli config --pow --pow-difficulty 30 --pow-timeout 30000
+```
+
+**Environment Variables:**
+
+```bash
+NOSTR_POW_ENABLED=true
+NOSTR_POW_DIFFICULTY=30
+NOSTR_POW_TIMEOUT=30000  # Optional timeout in milliseconds
+```
+
+### PoW Performance Guidelines
+
+- **Difficulty 0-15**: Very fast (milliseconds to seconds)
+- **Difficulty 16-20**: Moderate (seconds to tens of seconds)
+- **Difficulty 21-25**: Slow (minutes)
+- **Difficulty 26+**: Very slow (may take hours)
+
+**Recommended Settings:**
+
+- **Development**: Difficulty 10-12
+- **Production**: Difficulty 16-18
+- **High security relays**: Difficulty 20+
+
+### How PoW Works
+
+1. When PoW is enabled, the CLI adds a `nonce` tag to events before signing
+2. It iteratively tries different nonce values until the event ID has the required number of leading zeros
+3. The actual difficulty achieved may be higher than the target
+4. Events with PoW are more likely to be accepted by spam-filtering relays
+
+**PoW Event Example:**
+
+```json
+{
+  "kind": 34128,
+  "content": "",
+  "tags": [
+    ["d", "/index.html"],
+    ["x", "186ea5fd14e88fd1ac49351759e7ab906fa94892002b60bf7f5a428f28ca1c99"],
+    ["nonce", "12345", "16"]
+  ],
+  "id": "0000a1b2c3d4..." // ID starts with zeros (difficulty 16)
+}
+```
 
 ## 📡 Nostr Events Published
 
@@ -335,7 +413,9 @@ graph TB
 
 ## 🛠️ NIP Compliance
 
-This tool implements the **Pubkey Static Websites NIP** specification:
+This tool implements multiple Nostr protocol specifications:
+
+**Pubkey Static Websites NIP:**
 
 - ✅ Kind 34128 events for static file definitions
 - ✅ Absolute paths in `d` tags
@@ -344,6 +424,13 @@ This tool implements the **Pubkey Static Websites NIP** specification:
 - ✅ Kind 10063 BUD-03 user servers events
 - ✅ Fallback to `/index.html` for directory requests
 - ✅ `/404.html` fallback for not found pages
+
+**NIP-13 Proof of Work:**
+
+- ✅ Mining proof-of-work for events
+- ✅ Configurable difficulty levels
+- ✅ Nonce tags with target difficulty
+- ✅ Timeout protection for PoW computation
 
 ## 🌍 Nostr Ecosystem
 

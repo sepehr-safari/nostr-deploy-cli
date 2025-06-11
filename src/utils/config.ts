@@ -92,6 +92,24 @@ export class ConfigManager {
             config.nostr.relays = cleanValue ? cleanValue.split(',').map((r) => r.trim()) : [];
           }
           break;
+        case 'NOSTR_POW_ENABLED':
+          if (config.nostr) {
+            if (!config.nostr.pow) config.nostr.pow = { enabled: false, targetDifficulty: 30 };
+            config.nostr.pow.enabled = cleanValue.toLowerCase() === 'true';
+          }
+          break;
+        case 'NOSTR_POW_DIFFICULTY':
+          if (config.nostr) {
+            if (!config.nostr.pow) config.nostr.pow = { enabled: false, targetDifficulty: 30 };
+            config.nostr.pow.targetDifficulty = parseInt(cleanValue, 10) || 30;
+          }
+          break;
+        case 'NOSTR_POW_TIMEOUT':
+          if (config.nostr) {
+            if (!config.nostr.pow) config.nostr.pow = { enabled: false, targetDifficulty: 30 };
+            config.nostr.pow.timeout = parseInt(cleanValue, 10) || undefined;
+          }
+          break;
         case 'BLOSSOM_SERVER_URL':
           if (config.blossom) config.blossom.serverUrl = cleanValue;
           break;
@@ -120,6 +138,15 @@ export class ConfigManager {
     }
     if (this.config.nostr?.relays && this.config.nostr.relays.length > 0) {
       lines.push(`NOSTR_RELAYS=${this.config.nostr.relays.join(',')}`);
+    }
+
+    // Add PoW configuration if present
+    if (this.config.nostr?.pow) {
+      lines.push(`NOSTR_POW_ENABLED=${this.config.nostr.pow.enabled}`);
+      lines.push(`NOSTR_POW_DIFFICULTY=${this.config.nostr.pow.targetDifficulty}`);
+      if (this.config.nostr.pow.timeout) {
+        lines.push(`NOSTR_POW_TIMEOUT=${this.config.nostr.pow.timeout}`);
+      }
     }
 
     lines.push('');
@@ -175,6 +202,22 @@ export class ConfigManager {
       this.config.nostr = { publicKey: '', relays: [] };
     }
     this.config.nostr.relays = relays;
+    await this.saveConfig();
+  }
+
+  public async setNostrPow(
+    enabled: boolean,
+    targetDifficulty: number,
+    timeout?: number
+  ): Promise<void> {
+    if (!this.config.nostr) {
+      this.config.nostr = { publicKey: '', relays: [] };
+    }
+    this.config.nostr.pow = {
+      enabled,
+      targetDifficulty,
+      timeout,
+    };
     await this.saveConfig();
   }
 
