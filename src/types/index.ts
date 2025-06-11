@@ -11,7 +11,7 @@ export interface BlossomConfig {
 
 export interface DeploymentConfig {
   baseDomain: string;
-  sslProvider: 'letsencrypt' | 'cloudflare';
+  dnsProvider?: 'cloudflare';
 }
 
 export interface UserConfig {

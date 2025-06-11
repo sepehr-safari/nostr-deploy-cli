@@ -41,9 +41,9 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
           name: 'settings',
           message: 'What would you like to configure?',
           choices: [
-            { name: '🔗 Nostr Relays', value: 'relays' },
             { name: '🌸 Blossom Server', value: 'blossom' },
-            { name: '🔒 SSL Provider', value: 'ssl' },
+            { name: '🌐 Base Domain', value: 'domain' },
+            { name: '📡 DNS Provider', value: 'dns' },
           ],
         },
       ]);
@@ -91,31 +91,58 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
         console.log(chalk.green(`✅ Updated Blossom server: ${blossomInput.serverUrl}`));
       }
 
-      if (configChoice.settings.includes('ssl')) {
-        const sslInput = await inquirer.prompt([
+      if (configChoice.settings.includes('domain')) {
+        const domainInput = await inquirer.prompt([
           {
-            type: 'list',
-            name: 'provider',
-            message: 'Choose SSL certificate provider:',
-            choices: [
-              { name: "🔒 Let's Encrypt (Free)", value: 'letsencrypt' },
-              { name: '☁️  Cloudflare (Requires API key)', value: 'cloudflare' },
-            ],
-            default: currentConfig.deployment?.sslProvider || 'letsencrypt',
+            type: 'input',
+            name: 'baseDomain',
+            message: 'Enter base domain:',
+            default: currentConfig.deployment?.baseDomain || 'nostrdeploy.com',
+            validate: (input: string) => {
+              try {
+                new URL(input);
+                return true;
+              } catch {
+                return 'Please enter a valid domain';
+              }
+            },
           },
         ]);
 
         const updatedConfig = config.getConfig();
         if (updatedConfig.deployment) {
-          updatedConfig.deployment.sslProvider = sslInput.provider as 'letsencrypt' | 'cloudflare';
+          updatedConfig.deployment.baseDomain = domainInput.baseDomain;
         } else {
           updatedConfig.deployment = {
-            baseDomain: 'nostrdeploy.com',
-            sslProvider: sslInput.provider as 'letsencrypt' | 'cloudflare',
+            baseDomain: domainInput.baseDomain,
           };
         }
         await config.updateConfig(updatedConfig);
-        console.log(chalk.green(`✅ Updated SSL provider: ${sslInput.provider}`));
+        console.log(chalk.green(`✅ Updated base domain: ${domainInput.baseDomain}`));
+      }
+
+      if (configChoice.settings.includes('dns')) {
+        const dnsInput = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'provider',
+            message: 'Choose DNS provider:',
+            choices: [{ name: '☁️  Cloudflare (Requires API key)', value: 'cloudflare' }],
+            default: currentConfig.deployment?.dnsProvider || 'cloudflare',
+          },
+        ]);
+
+        const updatedConfig = config.getConfig();
+        if (updatedConfig.deployment) {
+          updatedConfig.deployment.dnsProvider = dnsInput.provider as 'cloudflare';
+        } else {
+          updatedConfig.deployment = {
+            baseDomain: 'nostrdeploy.com',
+            dnsProvider: dnsInput.provider as 'cloudflare',
+          };
+        }
+        await config.updateConfig(updatedConfig);
+        console.log(chalk.green(`✅ Updated DNS provider: ${dnsInput.provider}`));
       }
     }
 

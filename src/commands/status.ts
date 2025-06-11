@@ -36,12 +36,6 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
             status.status.toUpperCase()
         );
         console.log(
-          chalk.white('  SSL: ') +
-            getSSLIcon(status.sslStatus) +
-            ' ' +
-            status.sslStatus.toUpperCase()
-        );
-        console.log(
           chalk.white('  Last Checked: ') + chalk.gray(status.lastChecked.toLocaleString())
         );
 
@@ -131,19 +125,6 @@ function getStatusIcon(status: string): string {
       return '❌';
     case 'error':
       return '⚠️';
-    default:
-      return '❓';
-  }
-}
-
-function getSSLIcon(sslStatus: string): string {
-  switch (sslStatus) {
-    case 'valid':
-      return '🔒';
-    case 'expired':
-      return '⏰';
-    case 'invalid':
-      return '🔓';
     default:
       return '❓';
   }

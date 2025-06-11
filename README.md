@@ -13,7 +13,7 @@ Nostr Deploy CLI leverages the **decentralized Nostr protocol** and **Blossom se
 - **🔑 NPub Subdomains**: Your public key (npub) becomes your unique subdomain
 - **🌸 Blossom Storage**: Your files are stored on decentralized Blossom servers
 - **📡 NIP-Compliant**: Uses kind 34128 events for file metadata and kind 10063 for server lists
-- **🌐 Automatic SSL**: Get instant subdomains with SSL certificates
+- **🌐 Automatic Subdomains**: Get instant subdomains automatically
 - **🚀 Zero Configuration**: Deploys React, Vue, Angular, and any static site
 
 ## 🏗️ How It Works - Pubkey Static Websites NIP
@@ -202,7 +202,6 @@ Configuration is stored in `~/.nostr-deploy-cli/config.json`:
   },
   "deployment": {
     "baseDomain": "nostrdeploy.com",
-    "sslProvider": "letsencrypt",
     "dnsProvider": "cloudflare"
   }
 }

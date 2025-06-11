@@ -60,7 +60,6 @@ Current configuration:
 ? What would you like to configure?
 ❯ ◉ 🌸 Blossom Server
   ◉ 🌐 Base Domain
-  ◯ 🔒 SSL Provider
   ◯ 📡 DNS Provider
 
 ? Enter Blossom server URL: https://blossom.hzrd149.com
@@ -197,7 +196,6 @@ Output:
 
 Status Details:
   Status: ✅ ACTIVE
-  SSL: 🔒 VALID
   Last Checked: 12/15/2023, 4:00:00 PM
   Response Time: 245ms
   Files Deployed: 15

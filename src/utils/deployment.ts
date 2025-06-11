@@ -14,10 +14,6 @@ export interface SubdomainRequest {
 export interface SubdomainResponse {
   subdomain: string;
   fullUrl: string;
-  sslCertificate: {
-    issued: boolean;
-    expiresAt?: string;
-  };
 }
 
 export interface DeploymentResult {
@@ -185,7 +181,6 @@ export class DeploymentManager {
   public async getDeploymentStatus(npubSubdomain: string): Promise<{
     status: 'active' | 'inactive' | 'error';
     lastChecked: Date;
-    sslStatus: 'valid' | 'expired' | 'invalid';
     responseTime?: number;
     fileCount?: number;
   }> {
@@ -210,7 +205,6 @@ export class DeploymentManager {
       return {
         status: response.status < 400 ? 'active' : 'error',
         lastChecked: new Date(),
-        sslStatus: 'valid', // Would need proper SSL validation
         responseTime,
         fileCount,
       };
@@ -218,7 +212,6 @@ export class DeploymentManager {
       return {
         status: 'inactive',
         lastChecked: new Date(),
-        sslStatus: 'invalid',
       };
     }
   }

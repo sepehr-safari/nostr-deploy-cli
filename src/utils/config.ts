@@ -45,7 +45,6 @@ export class ConfigManager {
           },
           deployment: {
             baseDomain: 'nostrdeploy.com',
-            sslProvider: 'letsencrypt',
           },
         };
         await this.saveConfig();
@@ -103,8 +102,7 @@ export class ConfigManager {
   public async setBaseDomain(baseDomain: string): Promise<void> {
     if (!this.config.deployment) {
       this.config.deployment = {
-        baseDomain: '',
-        sslProvider: 'letsencrypt',
+        baseDomain: 'nostrdeploy.com',
       };
     }
     this.config.deployment.baseDomain = baseDomain;
