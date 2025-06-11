@@ -274,8 +274,8 @@ BLOSSOM_SERVER_URL=https://blossom.hzrd149.com
 # Deployment Settings
 BASE_DOMAIN=nostrdeploy.com
 
-# Proof of Work (Optional)
-NOSTR_POW_ENABLED=false
+# Proof of Work (Enabled by default)
+NOSTR_POW_ENABLED=true
 NOSTR_POW_DIFFICULTY=30
 NOSTR_POW_TIMEOUT=30000
 ```
@@ -292,6 +292,8 @@ NOSTR_POW_TIMEOUT=30000
 
 This CLI implements **NIP-13 Proof of Work** to help prevent spam on Nostr relays that require a minimum PoW for event acceptance.
 
+**PoW is enabled by default** with a target difficulty of 30 to ensure maximum relay compatibility.
+
 ### Configuring PoW
 
 **Interactive Configuration:**
@@ -305,14 +307,14 @@ nostr-deploy-cli config
 **Command Line Configuration:**
 
 ```bash
-# Enable PoW with default difficulty (30)
-nostr-deploy-cli config --pow
+# PoW is enabled by default - adjust difficulty if needed
+nostr-deploy-cli config --pow-difficulty 25
 
-# Enable PoW with custom difficulty
-nostr-deploy-cli config --pow --pow-difficulty 25
-
-# Disable PoW
+# Disable PoW (if you don't want it)
 nostr-deploy-cli config --no-pow
+
+# Re-enable PoW with default settings
+nostr-deploy-cli config --pow
 
 # Set PoW with timeout (30 seconds)
 nostr-deploy-cli config --pow --pow-difficulty 30 --pow-timeout 30000
@@ -321,8 +323,8 @@ nostr-deploy-cli config --pow --pow-difficulty 30 --pow-timeout 30000
 **Environment Variables:**
 
 ```bash
-NOSTR_POW_ENABLED=true
-NOSTR_POW_DIFFICULTY=30
+NOSTR_POW_ENABLED=true  # Default: enabled
+NOSTR_POW_DIFFICULTY=30  # Default: 30
 NOSTR_POW_TIMEOUT=30000  # Optional timeout in milliseconds
 ```
 

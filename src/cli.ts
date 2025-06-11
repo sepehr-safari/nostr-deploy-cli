@@ -92,9 +92,7 @@ program
     console.log(
       chalk.white('Configure relays: ') + chalk.green('nostr-deploy-cli config --relays <urls>')
     );
-    console.log(
-      chalk.white('Enable PoW: ') + chalk.green('nostr-deploy-cli config --pow --pow-difficulty 30')
-    );
+    console.log(chalk.white('Disable PoW: ') + chalk.green('nostr-deploy-cli config --no-pow'));
     console.log('');
     console.log(chalk.yellow('Fast Deploy:'));
     console.log(

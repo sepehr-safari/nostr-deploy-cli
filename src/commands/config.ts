@@ -63,7 +63,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
       options.powTimeout !== undefined
     ) {
       const currentConfig = config.getConfig();
-      const currentPow = currentConfig.nostr?.pow || { enabled: false, targetDifficulty: 30 };
+      const currentPow = currentConfig.nostr?.pow || { enabled: true, targetDifficulty: 30 };
 
       const enabled = options.pow !== undefined ? options.pow : currentPow.enabled;
       const difficulty =
@@ -211,7 +211,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
       }
 
       if (configChoice.settings.includes('pow')) {
-        const currentPow = currentConfig.nostr?.pow || { enabled: false, targetDifficulty: 30 };
+        const currentPow = currentConfig.nostr?.pow || { enabled: true, targetDifficulty: 30 };
 
         const powInput = await inquirer.prompt([
           {

@@ -94,19 +94,19 @@ export class ConfigManager {
           break;
         case 'NOSTR_POW_ENABLED':
           if (config.nostr) {
-            if (!config.nostr.pow) config.nostr.pow = { enabled: false, targetDifficulty: 30 };
+            if (!config.nostr.pow) config.nostr.pow = { enabled: true, targetDifficulty: 30 };
             config.nostr.pow.enabled = cleanValue.toLowerCase() === 'true';
           }
           break;
         case 'NOSTR_POW_DIFFICULTY':
           if (config.nostr) {
-            if (!config.nostr.pow) config.nostr.pow = { enabled: false, targetDifficulty: 30 };
+            if (!config.nostr.pow) config.nostr.pow = { enabled: true, targetDifficulty: 30 };
             config.nostr.pow.targetDifficulty = parseInt(cleanValue, 10) || 30;
           }
           break;
         case 'NOSTR_POW_TIMEOUT':
           if (config.nostr) {
-            if (!config.nostr.pow) config.nostr.pow = { enabled: false, targetDifficulty: 30 };
+            if (!config.nostr.pow) config.nostr.pow = { enabled: true, targetDifficulty: 30 };
             config.nostr.pow.timeout = parseInt(cleanValue, 10) || undefined;
           }
           break;
