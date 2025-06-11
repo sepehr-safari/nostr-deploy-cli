@@ -125,12 +125,12 @@ Each file is published as a kind 34128 event with path and hash information.
 Your npub serves as your unique subdomain identifier.
 ```
 
-### Vue.js App with Custom Name
+### Vue.js App
 
 ```bash
 cd my-vue-app
 npm run build
-nostr-deploy-cli deploy -n "My Portfolio"
+nostr-deploy-cli deploy
 ```
 
 ### Next.js Static Export
@@ -139,7 +139,7 @@ nostr-deploy-cli deploy -n "My Portfolio"
 cd my-nextjs-app
 npm run build
 npm run export
-nostr-deploy-cli deploy -d ./out -n "My Blog"
+nostr-deploy-cli deploy -d ./out
 ```
 
 ## Managing Deployments
@@ -335,7 +335,7 @@ jobs:
           nostr-deploy-cli config -b ${{ secrets.BLOSSOM_SERVER_URL }} -d ${{ secrets.BASE_DOMAIN }}
 
       - name: Deploy site
-        run: nostr-deploy-cli deploy -n "My Site (Auto-deployed)"
+                  run: nostr-deploy-cli deploy
 ```
 
 ### Environment Variables for CI/CD

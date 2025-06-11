@@ -43,8 +43,7 @@ program
   .command('deploy')
   .description('Deploy your static site')
   .option('-d, --dir <directory>', 'Directory to deploy (default: ./build or ./dist)')
-  .option('-n, --name <name>', 'Optional site name')
-  .option('--subdomain <subdomain>', 'Custom subdomain (if available)')
+  .option('--skip-setup', 'Skip auth and config steps, auto-generate keypair and deploy')
   .action(deployCommand);
 
 // Status command
@@ -76,6 +75,12 @@ program
       chalk.white('3. View project configuration: ') + chalk.green('nostr-deploy-cli info')
     );
     console.log(chalk.white('4. Deploy your site: ') + chalk.green('nostr-deploy-cli deploy'));
+    console.log('');
+    console.log(chalk.yellow('Fast Deploy:'));
+    console.log(
+      chalk.white('Skip setup and deploy directly: ') +
+        chalk.green('nostr-deploy-cli deploy --skip-setup')
+    );
     console.log('');
 
     console.log(

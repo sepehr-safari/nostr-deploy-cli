@@ -168,7 +168,6 @@ export class NostrManager {
     npubSubdomain: string;
     files: StaticFileInfo[];
     blossomServers: string[];
-    siteName?: string;
   }): Promise<{ staticFileEventIds: string[]; userServersEventId: string }> {
     console.log('📡 Publishing static file events (kind 34128)...');
     const staticFileEventIds = await this.publishStaticFileEvents(deploymentInfo.files);

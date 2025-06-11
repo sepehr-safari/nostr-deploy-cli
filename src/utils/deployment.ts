@@ -1,20 +1,8 @@
 import axios from 'axios';
-import * as crypto from 'crypto';
 import * as path from 'path';
 import { BlossomManager } from './blossom';
 import { ConfigManager } from './config';
 import { NostrManager, StaticFileInfo } from './nostr';
-
-export interface SubdomainRequest {
-  publicKey: string;
-  siteName?: string;
-  customSubdomain?: string;
-}
-
-export interface SubdomainResponse {
-  subdomain: string;
-  fullUrl: string;
-}
 
 export interface DeploymentResult {
   npubSubdomain: string;
@@ -44,13 +32,7 @@ export class DeploymentManager {
     return this.config;
   }
 
-  public async deployStaticSite(
-    buildDirectory: string,
-    options: {
-      siteName?: string;
-      customSubdomain?: string;
-    } = {}
-  ): Promise<DeploymentResult> {
+  public async deployStaticSite(buildDirectory: string): Promise<DeploymentResult> {
     console.log('🚀 Starting deployment process...');
 
     // Step 1: Validate build directory
@@ -89,7 +71,6 @@ export class DeploymentManager {
       npubSubdomain,
       files: staticFiles,
       blossomServers: [blossomServer],
-      siteName: options.siteName,
     });
 
     console.log('✅ Deployment completed successfully!');
@@ -131,51 +112,6 @@ export class DeploymentManager {
     if (!(await fs.pathExists(indexPath))) {
       throw new Error(`No index.html found in build directory: ${buildDirectory}`);
     }
-  }
-
-  /**
-   * Legacy method - kept for backwards compatibility
-   * New deployments should use npub subdomains
-   */
-  private generateDemoSubdomain(siteName: string): string {
-    console.warn('⚠️  Using legacy subdomain generation. Consider migrating to npub subdomains.');
-    const timestamp = Date.now().toString(36);
-    const hash = crypto.createHash('md5').update(siteName).digest('hex').substring(0, 6);
-    return `${siteName.toLowerCase().replace(/[^a-z0-9]/g, '')}-${hash}-${timestamp}`;
-  }
-
-  private async requestSubdomain(request: SubdomainRequest): Promise<SubdomainResponse> {
-    try {
-      const response = await axios.post(`${this.deploymentServiceUrl}/api/subdomain`, request, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Nostr ${request.publicKey}`,
-        },
-        timeout: 10000,
-      });
-
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const message = error.response?.data?.message || error.message;
-
-        if (status === 409) {
-          throw new Error(`Subdomain already taken: ${message}`);
-        } else if (status === 403) {
-          throw new Error(`Authentication failed: ${message}`);
-        } else {
-          throw new Error(`Failed to request subdomain: ${status} ${message}`);
-        }
-      }
-      throw new Error(`Network error while requesting subdomain: ${error}`);
-    }
-  }
-
-  public generateRandomSubdomain(prefix: string = ''): string {
-    const randomBytes = crypto.randomBytes(8);
-    const randomString = randomBytes.toString('hex');
-    return prefix ? `${prefix}-${randomString}` : randomString;
   }
 
   public async getDeploymentStatus(npubSubdomain: string): Promise<{

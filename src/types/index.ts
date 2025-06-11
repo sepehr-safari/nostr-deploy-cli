@@ -30,8 +30,7 @@ export interface DeploymentInfo {
 
 export interface DeployOptions {
   dir?: string;
-  name?: string;
-  subdomain?: string;
+  skipSetup?: boolean;
 }
 
 export interface AuthOptions {

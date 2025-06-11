@@ -52,6 +52,18 @@ Nostr Deploy CLI leverages the **decentralized Nostr protocol** and **Blossom se
 npm install -g nostr-deploy-cli
 ```
 
+### Instant Deploy
+
+Want to deploy immediately? Use the fast deploy option:
+
+```bash
+# Navigate to your project and deploy in one command
+cd your-project-directory
+nostr-deploy-cli deploy --skip-setup
+```
+
+This auto-generates keys and deploys without any setup required!
+
 ### Development / Local Usage
 
 If you're developing or want to test locally without global installation:
@@ -120,6 +132,27 @@ Your site is now live at `https://npub1abc123....nostrdeploy.com`!
 
 **Note:** Each project directory has its own `.env.nostr-deploy.local` configuration file with its own Nostr identity. This allows you to deploy different projects to different npub subdomains.
 
+### 🚀 Fast Deploy (Skip Setup)
+
+For quick deployments without manual setup, use the `--skip-setup` flag:
+
+```bash
+# Build your site first (if needed)
+npm run build
+
+# Auto-generate keys and deploy in one command
+nostr-deploy-cli deploy --skip-setup
+```
+
+This will:
+
+- 🔐 Auto-generate a new Nostr keypair
+- ⚙️ Set up default configuration (relays, Blossom server, domain)
+- 💾 Display your keys for you to save securely
+- 🚀 Deploy immediately to your new npub subdomain
+
+**Important:** Save the generated private key (nsec) securely! You'll need it for future deployments.
+
 ## 📋 Commands
 
 ### `nostr-deploy-cli auth`
@@ -182,7 +215,7 @@ Deploy your static site using Pubkey Static Websites NIP
 **Options:**
 
 - `-d, --dir <directory>` - Build directory (default: auto-detect)
-- `-n, --name <name>` - Site name
+- `--skip-setup` - Skip auth and config steps, auto-generate keypair and deploy
 
 **Examples:**
 
@@ -193,8 +226,14 @@ nostr-deploy-cli deploy
 # Specify build directory
 nostr-deploy-cli deploy -d ./dist
 
-# Deploy with custom name
-nostr-deploy-cli deploy -n "My Blog"
+# Deploy with specific directory
+nostr-deploy-cli deploy -d ./out
+
+# Fast deploy: auto-generate keys and deploy in one command
+nostr-deploy-cli deploy --skip-setup
+
+# Fast deploy with specific directory
+nostr-deploy-cli deploy --skip-setup -d ./build
 ```
 
 ### `nostr-deploy-cli status`

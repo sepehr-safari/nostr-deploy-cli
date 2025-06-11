@@ -5,6 +5,43 @@ import * as path from 'path';
 import { DeployOptions } from '../types';
 import { ConfigManager } from '../utils/config';
 import { DeploymentManager } from '../utils/deployment';
+import { NostrManager } from '../utils/nostr';
+
+async function performAutoSetup(): Promise<void> {
+  const config = await ConfigManager.getInstance();
+  const nostr = new NostrManager();
+
+  console.log(chalk.cyan('\n🔐 Auto-generating Nostr keypair for deployment...\n'));
+
+  // Generate new keypair
+  const keyPair = nostr.generateKeyPair();
+
+  console.log(chalk.green('✅ Key pair generated successfully!'));
+  console.log(chalk.white('Private Key (nsec): ') + chalk.red(keyPair.nsec));
+  console.log(chalk.white('Public Key (npub): ') + chalk.blue(keyPair.npub));
+  console.log(chalk.yellow('\n⚠️  IMPORTANT: Save your private key (nsec) securely!'));
+  console.log(chalk.yellow('⚠️  This key pair is specific to this deployment.'));
+
+  // Save the keypair
+  await config.setNostrKey(keyPair.privateKey, keyPair.publicKey);
+
+  // Set up minimal configuration with defaults
+  const defaultRelays = ['wss://nos.lol', 'wss://ditto.pub/relay', 'wss://relay.damus.io'];
+  await config.setNostrRelays(defaultRelays);
+
+  // Set up minimal blossom config with a default server
+  const userConfig = config.getConfig();
+  if (!userConfig.blossom?.serverUrl) {
+    await config.setBlossomServer('https://blossom.primal.net');
+  }
+
+  // Set up default domain if not configured
+  if (!userConfig.deployment?.baseDomain) {
+    await config.setBaseDomain('nostrdeploy.com');
+  }
+
+  console.log(chalk.green('✅ Auto-configuration complete!'));
+}
 
 export async function deployCommand(options: DeployOptions): Promise<void> {
   const config = await ConfigManager.getInstance();
@@ -17,54 +54,70 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
     const projectName = path.basename(process.cwd());
     console.log(chalk.white('Project: ') + chalk.yellow(projectName));
 
-    // Check if user is authenticated and configured
-    const hasLocalConfig = await config.hasLocalConfig();
-    if (!hasLocalConfig) {
-      console.log(chalk.red('❌ No local configuration found for this project!'));
-      console.log(chalk.white('This project needs to be set up before you can deploy.'));
-      console.log(chalk.white('Please run the following commands first:'));
-      console.log(
-        chalk.white('  1. ') +
-          chalk.green('nostr-deploy-cli auth') +
-          chalk.white(' - Set up authentication for this project')
-      );
-      console.log(
-        chalk.white('  2. ') +
-          chalk.green('nostr-deploy-cli config') +
-          chalk.white(' - Configure deployment settings')
-      );
-      console.log(
-        chalk.white('  3. ') +
-          chalk.green('nostr-deploy-cli info') +
-          chalk.white(' - View project configuration')
-      );
-      return;
-    }
-
-    if (!config.isConfigured()) {
-      console.log(chalk.red('❌ Project configuration incomplete!'));
-      console.log(chalk.white('Please run the following commands to complete setup:'));
-      const userConfig = config.getConfig();
-      if (!userConfig.nostr?.publicKey) {
+    // Handle skip-setup flag
+    if (options.skipSetup) {
+      console.log(chalk.yellow('⚡ Skip-setup mode enabled - auto-configuring...'));
+      await performAutoSetup();
+    } else {
+      // Check if user is authenticated and configured
+      const hasLocalConfig = await config.hasLocalConfig();
+      if (!hasLocalConfig) {
+        console.log(chalk.red('❌ No local configuration found for this project!'));
+        console.log(chalk.white('This project needs to be set up before you can deploy.'));
+        console.log(chalk.white('Please run the following commands first:'));
         console.log(
-          chalk.white('  • ') +
+          chalk.white('  1. ') +
             chalk.green('nostr-deploy-cli auth') +
-            chalk.white(' - Set up authentication')
+            chalk.white(' - Set up authentication for this project')
         );
-      }
-      if (!userConfig.blossom?.serverUrl) {
         console.log(
-          chalk.white('  • ') +
+          chalk.white('  2. ') +
             chalk.green('nostr-deploy-cli config') +
             chalk.white(' - Configure deployment settings')
         );
+        console.log(
+          chalk.white('  3. ') +
+            chalk.green('nostr-deploy-cli info') +
+            chalk.white(' - View project configuration')
+        );
+        console.log(
+          chalk.white('Or use: ') +
+            chalk.green('nostr-deploy-cli deploy --skip-setup') +
+            chalk.white(' to auto-configure and deploy')
+        );
+        return;
       }
-      console.log(
-        chalk.white('  • ') +
-          chalk.green('nostr-deploy-cli info') +
-          chalk.white(' - View current configuration')
-      );
-      return;
+
+      if (!config.isConfigured()) {
+        console.log(chalk.red('❌ Project configuration incomplete!'));
+        console.log(chalk.white('Please run the following commands to complete setup:'));
+        const userConfig = config.getConfig();
+        if (!userConfig.nostr?.publicKey) {
+          console.log(
+            chalk.white('  • ') +
+              chalk.green('nostr-deploy-cli auth') +
+              chalk.white(' - Set up authentication')
+          );
+        }
+        if (!userConfig.blossom?.serverUrl) {
+          console.log(
+            chalk.white('  • ') +
+              chalk.green('nostr-deploy-cli config') +
+              chalk.white(' - Configure deployment settings')
+          );
+        }
+        console.log(
+          chalk.white('  • ') +
+            chalk.green('nostr-deploy-cli info') +
+            chalk.white(' - View current configuration')
+        );
+        console.log(
+          chalk.white('Or use: ') +
+            chalk.green('nostr-deploy-cli deploy --skip-setup') +
+            chalk.white(' to auto-configure and deploy')
+        );
+        return;
+      }
     }
 
     // Determine build directory
@@ -108,10 +161,7 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
     spinner = ora('Preparing deployment...').start();
 
     try {
-      const result = await deployment.deployStaticSite(buildDir, {
-        siteName: options.name,
-        customSubdomain: options.subdomain,
-      });
+      const result = await deployment.deployStaticSite(buildDir);
 
       spinner.succeed('Deployment completed successfully!');
 
@@ -174,19 +224,6 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
 
     process.exit(1);
   }
-}
-
-async function getSiteNameFromPackageJson(): Promise<string | null> {
-  try {
-    const packageJsonPath = './package.json';
-    if (await fs.pathExists(packageJsonPath)) {
-      const packageJson = await fs.readJSON(packageJsonPath);
-      return packageJson.name || null;
-    }
-  } catch {
-    // Ignore errors
-  }
-  return null;
 }
 
 export async function findBuildDirectory(): Promise<string | null> {
