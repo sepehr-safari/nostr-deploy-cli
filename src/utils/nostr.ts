@@ -115,7 +115,8 @@ export class NostrManager {
   public async publishStaticFileEvents(files: StaticFileInfo[]): Promise<string[]> {
     const eventIds: string[] = [];
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       const eventId = await this.publishEvent(
         '', // Empty content as per NIP
         34128, // Kind for static file definition
@@ -125,6 +126,11 @@ export class NostrManager {
         ]
       );
       eventIds.push(eventId);
+
+      // Add delay between publishing events to avoid rate limits on nostr relays
+      if (i < files.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
     }
 
     return eventIds;
