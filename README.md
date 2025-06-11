@@ -1,19 +1,48 @@
 # Nostr Deploy CLI
 
-> A revolutionary CLI tool for deploying static sites using the Nostr protocol and Blossom servers
+> A revolutionary CLI tool for deploying static sites using the Nostr protocol and Blossom servers following the **Pubkey Static Websites NIP**
 
 [![npm version](https://badge.fury.io/js/nostr-deploy-cli.svg)](https://badge.fury.io/js/nostr-deploy-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🌟 What makes this special?
 
-Nostr Deploy CLI leverages the **decentralized Nostr protocol** and **Blossom servers** to provide a unique static site deployment experience:
+Nostr Deploy CLI leverages the **decentralized Nostr protocol** and **Blossom servers** with the **Pubkey Static Websites NIP** standard to provide a unique static site deployment experience:
 
 - **🔐 Decentralized Authentication**: No traditional accounts needed - authenticate with your Nostr keys
+- **🔑 NPub Subdomains**: Your public key (npub) becomes your unique subdomain
 - **🌸 Blossom Storage**: Your files are stored on decentralized Blossom servers
-- **📡 Nostr Integration**: Deployment metadata is published to Nostr relays
-- **🌐 Automatic Subdomains**: Get instant subdomains with SSL certificates
+- **📡 NIP-Compliant**: Uses kind 34128 events for file metadata and kind 10063 for server lists
+- **🌐 Automatic SSL**: Get instant subdomains with SSL certificates
 - **🚀 Zero Configuration**: Deploys React, Vue, Angular, and any static site
+
+## 🏗️ How It Works - Pubkey Static Websites NIP
+
+### 1. **NPub Subdomain Generation**
+
+- Your Nostr public key (npub) becomes your subdomain: `npub1abc123....nostrdeploy.com`
+- No random subdomains - your identity is tied to your Nostr key
+- Consistent subdomain across all deployments
+
+### 2. **File Metadata Publishing (Kind 34128)**
+
+- Each file is published as a kind 34128 Nostr event
+- Contains `d` tag with absolute file path (e.g., `/index.html`)
+- Contains `x` tag with SHA-256 hash of the file content
+- Enables decentralized file discovery and integrity verification
+
+### 3. **Server List Publishing (Kind 10063)**
+
+- BUD-03 user servers event specifies which Blossom servers host your files
+- Host servers can discover and serve files from the correct Blossom instances
+- Enables redundancy and decentralized hosting
+
+### 4. **Host Server Resolution**
+
+- Host servers resolve `npub1xyz.nostrdeploy.com` requests
+- Fetch user's kind 34128 events for the requested path
+- Retrieve files from Blossom servers using SHA-256 hashes
+- Serve with proper Content-Type headers
 
 ## 🚀 Quick Start
 
@@ -41,7 +70,7 @@ node dist/cli.js config
 
 # Or create a local symlink (recommended for development)
 npm link
-nostr-deploy help  # Now works globally during development
+nostr-deploy-cli help  # Now works globally during development
 
 # Remove the symlink when done
 npm unlink -g nostr-deploy-cli
@@ -52,32 +81,30 @@ npm unlink -g nostr-deploy-cli
 1. **Authenticate with Nostr:**
 
 ```bash
-nostr-deploy auth
+nostr-deploy-cli auth
 ```
 
-Choose to generate new keys or import existing ones.
+Your npub will become your subdomain: `npub1abc123....nostrdeploy.com`
 
 2. **Configure deployment settings:**
 
 ```bash
-nostr-deploy config
+nostr-deploy-cli config
 ```
-
-Set up Blossom server, base domain, and other preferences.
 
 3. **Deploy your first site:**
 
 ```bash
 cd your-react-app
 npm run build
-nostr-deploy deploy
+nostr-deploy-cli deploy
 ```
 
-That's it! Your site is now live with a unique subdomain and SSL certificate.
+Your site is now live at `https://npub1abc123....nostrdeploy.com`!
 
 ## 📋 Commands
 
-### `nostr-deploy auth`
+### `nostr-deploy-cli auth`
 
 Set up Nostr authentication
 
@@ -89,17 +116,17 @@ Set up Nostr authentication
 **Examples:**
 
 ```bash
-# Interactive setup
-nostr-deploy auth
+# Interactive setup - generates new keys and shows your npub subdomain
+nostr-deploy-cli auth
 
 # Import existing private key
-nostr-deploy auth -k nsec1abc123...
+nostr-deploy-cli auth -k nsec1abc123...
 
 # Import public key only (read-only mode)
-nostr-deploy auth -p npub1xyz789...
+nostr-deploy-cli auth -p npub1xyz789...
 ```
 
-### `nostr-deploy config`
+### `nostr-deploy-cli config`
 
 Configure deployment settings
 
@@ -113,88 +140,55 @@ Configure deployment settings
 
 ```bash
 # Interactive configuration
-nostr-deploy config
+nostr-deploy-cli config
 
 # Set specific options
-nostr-deploy config -b https://blossom.myserver.com -d mysite.dev
+nostr-deploy-cli config -b https://blossom.hzrd149.com -d nostrdeploy.com
 ```
 
-### `nostr-deploy deploy`
+### `nostr-deploy-cli deploy`
 
-Deploy your static site
+Deploy your static site using Pubkey Static Websites NIP
 
 **Options:**
 
 - `-d, --dir <directory>` - Build directory (default: auto-detect)
 - `-n, --name <name>` - Site name
-- `--subdomain <subdomain>` - Custom subdomain (if available)
 
 **Examples:**
 
 ```bash
-# Auto-detect build directory
-nostr-deploy deploy
+# Auto-detect build directory and deploy to your npub subdomain
+nostr-deploy-cli deploy
 
 # Specify build directory
-nostr-deploy deploy -d ./dist
+nostr-deploy-cli deploy -d ./dist
 
-# Deploy with custom name and subdomain
-nostr-deploy deploy -n "My Blog" --subdomain my-blog
+# Deploy with custom name
+nostr-deploy-cli deploy -n "My Blog"
 ```
 
-### `nostr-deploy status`
+### `nostr-deploy-cli status`
 
-Check deployment status
+Check deployment status for your npub subdomain
 
 **Options:**
 
-- `-s, --subdomain <subdomain>` - Check specific subdomain
+- `-s, --subdomain <npub>` - Check specific npub subdomain
 
 **Examples:**
 
 ```bash
-# List all deployments
-nostr-deploy status
+# List all your deployments
+nostr-deploy-cli status
 
-# Check specific site
-nostr-deploy status -s my-site-abc123
+# Check your npub subdomain status
+nostr-deploy-cli status -s npub1abc123...
 ```
-
-## 🏗️ How It Works
-
-### 1. **Authentication with Nostr**
-
-- Generate or import Nostr key pairs (public/private keys)
-- No traditional account registration required
-- Keys are stored securely in your local config
-
-### 2. **File Upload to Blossom**
-
-- Static files are uploaded to decentralized Blossom servers
-- Each file gets a unique SHA-256 hash for integrity
-- A manifest is created linking all files together
-
-### 3. **Subdomain & SSL Management**
-
-- Automatic subdomain generation (e.g., `abc123.nostrsite.dev`)
-- DNS records are configured automatically
-- SSL certificates issued via Let's Encrypt
-
-### 4. **Nostr Metadata Publishing**
-
-- Deployment information is published to Nostr relays
-- Includes subdomain, file hashes, and deployment timestamp
-- Enables decentralized deployment history
-
-### 5. **Live Site Serving**
-
-- Your subdomain points to a proxy that serves files from Blossom
-- Global CDN distribution for fast loading
-- Automatic HTTPS with valid SSL certificates
 
 ## 🔧 Configuration
 
-Configuration is stored in `~/.nostr-deploy/config.json`:
+Configuration is stored in `~/.nostr-deploy-cli/config.json`:
 
 ```json
 {
@@ -204,51 +198,77 @@ Configuration is stored in `~/.nostr-deploy/config.json`:
     "relays": ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"]
   },
   "blossom": {
-    "serverUrl": "https://blossom.server.example.com"
+    "serverUrl": "https://blossom.hzrd149.com"
   },
   "deployment": {
-    "baseDomain": "nostrsite.dev",
+    "baseDomain": "nostrdeploy.com",
     "sslProvider": "letsencrypt",
     "dnsProvider": "cloudflare"
   }
 }
 ```
 
-## 🛠️ Supported Frameworks
+## 📡 Nostr Events Published
 
-Works with any static site generator or framework:
+### Static File Events (Kind 34128)
 
-- **React** (`npm run build` → `./build`)
-- **Vue.js** (`npm run build` → `./dist`)
-- **Angular** (`ng build` → `./dist`)
-- **Next.js** (`next build && next export` → `./out`)
-- **Gatsby** (`gatsby build` → `./public`)
-- **Svelte** (`npm run build` → `./public`)
-- **Jekyll** (`jekyll build` → `./_site`)
-- **Hugo** (`hugo` → `./public`)
+```json
+{
+  "kind": 34128,
+  "content": "",
+  "tags": [
+    ["d", "/index.html"],
+    ["x", "186ea5fd14e88fd1ac49351759e7ab906fa94892002b60bf7f5a428f28ca1c99"]
+  ]
+}
+```
+
+### User Servers Event (Kind 10063)
+
+```json
+{
+  "kind": 10063,
+  "content": "",
+  "tags": [["server", "https://blossom.hzrd149.com"]]
+}
+```
 
 ## 🌐 Architecture
 
 ```mermaid
 graph TB
-    A[Your Static Site] --> B[nostr-deploy CLI]
+    A[Your Static Site] --> B[nostr-deploy-cli CLI]
     B --> C[Blossom Server]
     B --> D[Nostr Relays]
-    B --> E[DNS Provider]
-    C --> F[File Storage]
-    D --> G[Deployment Metadata]
-    E --> H[Subdomain + SSL]
-    H --> I[Live Website]
+    B --> E[nostrdeploy.com]
+    C --> F[File Storage with SHA-256]
+    D --> G[Kind 34128 File Events]
+    D --> H[Kind 10063 Server Events]
+    E --> I[npub1abc.nostrdeploy.com]
     F --> I
+    G --> I
+    H --> I
 ```
 
 ## 🔒 Security & Privacy
 
 - **Decentralized**: No central authority controls your deployments
-- **Encrypted Communication**: All API calls use HTTPS/WSS
-- **Key Security**: Private keys never leave your machine
+- **Cryptographic Identity**: Your npub is cryptographically tied to your private key
 - **Content Integrity**: SHA-256 hashes ensure file integrity
-- **SSL/TLS**: All sites automatically get valid SSL certificates
+- **Verifiable**: Anyone can verify your site's authenticity via Nostr events
+- **Censorship Resistant**: Distributed across multiple relays and Blossom servers
+
+## 🛠️ NIP Compliance
+
+This tool implements the **Pubkey Static Websites NIP** specification:
+
+- ✅ Kind 34128 events for static file definitions
+- ✅ Absolute paths in `d` tags
+- ✅ SHA-256 hashes in `x` tags
+- ✅ NPub subdomain resolution
+- ✅ Kind 10063 BUD-03 user servers events
+- ✅ Fallback to `/index.html` for directory requests
+- ✅ `/404.html` fallback for not found pages
 
 ## 🌍 Nostr Ecosystem
 

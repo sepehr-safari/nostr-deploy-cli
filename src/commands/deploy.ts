@@ -20,12 +20,12 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       console.log(chalk.white('Please run the following commands first:'));
       console.log(
         chalk.white('  1. ') +
-          chalk.green('nostr-deploy auth') +
+          chalk.green('nostr-deploy-cli auth') +
           chalk.white(' - Set up authentication')
       );
       console.log(
         chalk.white('  2. ') +
-          chalk.green('nostr-deploy config') +
+          chalk.green('nostr-deploy-cli config') +
           chalk.white(' - Configure deployment settings')
       );
       return;
@@ -84,18 +84,34 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
 
       console.log(chalk.cyan('\n🎉 Deployment Complete!\n'));
       console.log(chalk.white('📍 Site URL: ') + chalk.green(`https://${result.fullUrl}`));
-      console.log(chalk.white('🏷️  Subdomain: ') + chalk.blue(result.subdomain));
-      console.log(chalk.white('🔗 Blossom URL: ') + chalk.gray(result.blossomManifestUrl));
-      console.log(chalk.white('📡 Nostr Event: ') + chalk.gray(result.nostrEventId));
+      console.log(chalk.white('🔑 NPub Subdomain: ') + chalk.blue(result.npubSubdomain));
+      console.log(chalk.white('📁 Files deployed: ') + chalk.yellow(result.fileCount.toString()));
+      console.log(
+        chalk.white('📡 Static file events: ') +
+          chalk.gray(result.staticFileEventIds.length.toString())
+      );
+      console.log(
+        chalk.white('🌸 User servers event: ') +
+          chalk.gray(result.userServersEventId.substring(0, 16) + '...')
+      );
       console.log(chalk.white('⏰ Deployed at: ') + chalk.gray(result.deployedAt.toLocaleString()));
 
       console.log(chalk.cyan('\n📊 Next Steps:'));
       console.log(chalk.white('• Visit your site: ') + chalk.green(`https://${result.fullUrl}`));
       console.log(
         chalk.white('• Check deployment status: ') +
-          chalk.green(`nostr-deploy status -s ${result.subdomain}`)
+          chalk.green(`nostr-deploy-cli status -s ${result.npubSubdomain}`)
       );
-      console.log(chalk.white('• View all deployments: ') + chalk.green('nostr-deploy status'));
+      console.log(chalk.white('• View all deployments: ') + chalk.green('nostr-deploy-cli status'));
+
+      console.log(chalk.cyan('\n🔗 About Pubkey Static Websites:'));
+      console.log(
+        chalk.white('Your site is deployed using the Pubkey Static Websites NIP standard.')
+      );
+      console.log(
+        chalk.white('Each file is published as a kind 34128 event with path and hash information.')
+      );
+      console.log(chalk.white('Your npub serves as your unique subdomain identifier.'));
     } catch (error) {
       if (spinner) spinner.fail('Deployment failed');
       throw error;
@@ -114,7 +130,7 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
     } else if (errorString.includes('Authentication')) {
       console.log(
         chalk.yellow('\n💡 Tip: Run ') +
-          chalk.green('nostr-deploy auth') +
+          chalk.green('nostr-deploy-cli auth') +
           chalk.yellow(' to set up authentication.')
       );
     }

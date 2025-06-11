@@ -14,9 +14,9 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
       console.log(chalk.red('❌ Configuration incomplete!'));
       console.log(
         chalk.white('Please run: ') +
-          chalk.green('nostr-deploy auth') +
+          chalk.green('nostr-deploy-cli auth') +
           chalk.white(' and ') +
-          chalk.green('nostr-deploy config')
+          chalk.green('nostr-deploy-cli config')
       );
       return;
     }
@@ -49,9 +49,15 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
           console.log(chalk.white('  Response Time: ') + chalk.gray(`${status.responseTime}ms`));
         }
 
+        if (status.fileCount) {
+          console.log(
+            chalk.white('  Files Deployed: ') + chalk.yellow(status.fileCount.toString())
+          );
+        }
+
         if (status.status === 'active') {
           const userConfig = config.getConfig();
-          const baseDomain = userConfig.deployment?.baseDomain || 'nostrsite.dev';
+          const baseDomain = userConfig.deployment?.baseDomain || 'nostrdeploy.com';
           console.log(
             chalk.green(`\n✅ Site is live at: https://${options.subdomain}.${baseDomain}`)
           );
@@ -62,62 +68,58 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
         console.error(chalk.red(`❌ Failed to check status: ${error}`));
       }
     } else {
-      // List all user deployments
-      console.log(chalk.blue('📋 Fetching your deployment history...\n'));
+      // List all deployments using new NIP format
+      console.log(chalk.blue('📋 Fetching your deployment history from Nostr...'));
 
       try {
         const deployments = await deployment.listUserDeployments();
+        const currentNpub = await deployment.getCurrentNpubSubdomain();
 
         if (deployments.length === 0) {
-          console.log(chalk.yellow('No deployments found.'));
+          console.log(chalk.yellow('\n📭 No deployments found.'));
           console.log(
-            chalk.white('Deploy your first site with: ') + chalk.green('nostr-deploy deploy')
+            chalk.white('Deploy your first site with: ') + chalk.green('nostr-deploy-cli deploy')
+          );
+          console.log(
+            chalk.white('Your sites will be available at: ') +
+              chalk.cyan(`${currentNpub}.nostrdeploy.com`)
           );
           return;
         }
 
-        console.log(chalk.white(`Found ${deployments.length} deployment(s):\n`));
+        console.log(chalk.green(`\nFound ${deployments.length} deployment(s):\n`));
 
-        for (let i = 0; i < deployments.length; i++) {
-          const dep = deployments[i];
-          const num = chalk.cyan(`${i + 1}.`);
+        deployments.forEach((dep, index) => {
+          console.log(chalk.white(`${index + 1}. Deployment`));
+          console.log(
+            chalk.white('   📍 URL: ') + chalk.cyan(`https://${currentNpub}.nostrdeploy.com`)
+          );
+          console.log(chalk.white('   📅 Deployed: ') + chalk.gray(dep.createdAt.toLocaleString()));
+          console.log(chalk.white('   📁 Files: ') + chalk.yellow(dep.files.length.toString()));
+          console.log(
+            chalk.white('   📡 Event ID: ') + chalk.gray(dep.eventId.substring(0, 16) + '...')
+          );
 
-          console.log(`${num} ${chalk.white(dep.siteName || 'Unnamed Site')}`);
-          console.log(`   📍 URL: ${chalk.green(`https://${dep.subdomain}`)}`);
-          console.log(`   📅 Deployed: ${chalk.gray(new Date(dep.deployedAt).toLocaleString())}`);
-          console.log(`   🔗 Blossom: ${chalk.gray(dep.blossomUrl)}`);
-
-          // Check live status
-          try {
-            const liveStatus = await deployment.getDeploymentStatus(
-              dep.subdomain.replace(/^https?:\/\//, '').split('.')[0]
-            );
-            console.log(
-              `   ${getStatusIcon(liveStatus.status)} Status: ${liveStatus.status.toUpperCase()}`
-            );
-          } catch {
-            console.log(`   ❓ Status: UNKNOWN`);
+          if (index < deployments.length - 1) {
+            console.log('');
           }
+        });
 
-          console.log(''); // Empty line between deployments
-        }
-
-        console.log(chalk.cyan('Commands:'));
+        console.log(chalk.cyan('\n📊 Next Steps:'));
         console.log(
-          chalk.white('• Check specific site: ') + chalk.green('nostr-deploy status -s <subdomain>')
+          chalk.white('• Check specific deployment: ') +
+            chalk.green(`nostr-deploy-cli status -s ${currentNpub}`)
         );
-        console.log(chalk.white('• Deploy new site: ') + chalk.green('nostr-deploy deploy'));
+        console.log(chalk.white('• Deploy new site: ') + chalk.green('nostr-deploy-cli deploy'));
+        console.log(
+          chalk.white('• Your npub subdomain: ') + chalk.cyan(`${currentNpub}.nostrdeploy.com`)
+        );
       } catch (error) {
-        console.error(chalk.red(`❌ Failed to fetch deployments: ${error}`));
-        console.log(chalk.yellow('\n💡 This might be due to:'));
-        console.log(chalk.white('  • Network connectivity issues'));
-        console.log(chalk.white('  • Nostr relay connectivity'));
-        console.log(chalk.white('  • Authentication problems'));
+        console.error(chalk.red(`❌ Failed to fetch deployment history: ${error}`));
       }
     }
   } catch (error) {
-    console.error(chalk.red(`\n❌ Status check failed: ${error}`));
-    process.exit(1);
+    console.error(chalk.red(`❌ Error: ${error}`));
   }
 }
 
@@ -139,9 +141,9 @@ function getSSLIcon(sslStatus: string): string {
     case 'valid':
       return '🔒';
     case 'expired':
-      return '⚠️';
+      return '⏰';
     case 'invalid':
-      return '❌';
+      return '🔓';
     default:
       return '❓';
   }

@@ -9,6 +9,11 @@ import {
 import 'websocket-polyfill';
 import { ConfigManager } from './config';
 
+export interface StaticFileInfo {
+  path: string;
+  sha256: string;
+}
+
 export class NostrManager {
   private pool: SimplePool;
   private config: ConfigManager | null = null;
@@ -57,7 +62,7 @@ export class NostrManager {
     const userConfig = config.getConfig();
 
     if (!userConfig.nostr?.privateKey) {
-      throw new Error('No private key configured. Run `nostr-deploy auth` first.');
+      throw new Error('No private key configured. Run `nostr-deploy-cli auth` first.');
     }
 
     const privateKeyBytes = new Uint8Array(Buffer.from(userConfig.nostr.privateKey, 'hex'));
@@ -103,32 +108,102 @@ export class NostrManager {
     }
   }
 
-  public async publishDeploymentMetadata(deploymentInfo: {
-    subdomain: string;
-    fileHash: string;
-    blossomUrl: string;
-    siteName?: string;
-  }): Promise<string> {
-    const content = JSON.stringify({
-      type: 'static-site-deployment',
-      subdomain: deploymentInfo.subdomain,
-      fileHash: deploymentInfo.fileHash,
-      blossomUrl: deploymentInfo.blossomUrl,
-      siteName: deploymentInfo.siteName,
-      deployedAt: new Date().toISOString(),
-    });
+  /**
+   * Publish static file events according to Pubkey Static Websites NIP
+   * Kind 34128 events with d (absolute path) and x (sha256 hash) tags
+   */
+  public async publishStaticFileEvents(files: StaticFileInfo[]): Promise<string[]> {
+    const eventIds: string[] = [];
 
-    const tags = [
-      ['t', 'static-site'],
-      ['t', 'deployment'],
-      ['subdomain', deploymentInfo.subdomain],
-      ['hash', deploymentInfo.fileHash],
-    ];
+    for (const file of files) {
+      const eventId = await this.publishEvent(
+        '', // Empty content as per NIP
+        34128, // Kind for static file definition
+        [
+          ['d', file.path], // Absolute path ending with filename and extension
+          ['x', file.sha256], // SHA256 hash of the file
+        ]
+      );
+      eventIds.push(eventId);
+    }
 
-    return this.publishEvent(content, 30000, tags); // Using kind 30000 for app-specific data
+    return eventIds;
   }
 
-  public async getDeploymentHistory(publicKey?: string): Promise<any[]> {
+  /**
+   * Publish a BUD-03 user servers event (kind 10063) to specify Blossom servers
+   */
+  public async publishUserServersEvent(blossomServers: string[]): Promise<string> {
+    const content = '';
+    const tags = blossomServers.map((server) => ['server', server]);
+
+    return this.publishEvent(content, 10063, tags);
+  }
+
+  /**
+   * Get the npub (bech32 encoded public key) for subdomain generation
+   */
+  public async getNpubSubdomain(): Promise<string> {
+    const config = await this.getConfig();
+    const userConfig = config.getConfig();
+
+    if (!userConfig.nostr?.publicKey) {
+      throw new Error('No public key configured. Run `nostr-deploy-cli auth` first.');
+    }
+
+    // Convert hex public key to npub format
+    const npub = nip19.npubEncode(userConfig.nostr.publicKey);
+    return npub;
+  }
+
+  /**
+   * Get the public key from private key (for auth flow)
+   */
+  public getPublicKeyFromPrivate(privateKeyHex: string): string {
+    const privateKeyBytes = new Uint8Array(Buffer.from(privateKeyHex, 'hex'));
+    return getPublicKey(privateKeyBytes);
+  }
+
+  public async publishDeploymentMetadata(deploymentInfo: {
+    npubSubdomain: string;
+    files: StaticFileInfo[];
+    blossomServers: string[];
+    siteName?: string;
+  }): Promise<{ staticFileEventIds: string[]; userServersEventId: string }> {
+    console.log('📡 Publishing static file events (kind 34128)...');
+    const staticFileEventIds = await this.publishStaticFileEvents(deploymentInfo.files);
+
+    console.log('📡 Publishing user servers event (kind 10063)...');
+    const userServersEventId = await this.publishUserServersEvent(deploymentInfo.blossomServers);
+
+    return {
+      staticFileEventIds,
+      userServersEventId,
+    };
+  }
+
+  public async getStaticFileEvents(publicKey?: string, path?: string): Promise<NostrEvent[]> {
+    const config = await this.getConfig();
+    const userConfig = config.getConfig();
+    const targetPubkey = publicKey || userConfig.nostr?.publicKey;
+
+    if (!targetPubkey) {
+      throw new Error('No public key provided');
+    }
+
+    const filter: any = {
+      authors: [targetPubkey],
+      kinds: [34128],
+    };
+
+    if (path) {
+      filter['#d'] = [path];
+    }
+
+    return this.fetchEvents(filter);
+  }
+
+  public async getUserServersEvent(publicKey?: string): Promise<NostrEvent | null> {
     const config = await this.getConfig();
     const userConfig = config.getConfig();
     const targetPubkey = publicKey || userConfig.nostr?.publicKey;
@@ -139,26 +214,50 @@ export class NostrManager {
 
     const filter = {
       authors: [targetPubkey],
-      kinds: [30000],
-      '#t': ['static-site', 'deployment'],
+      kinds: [10063],
+      limit: 1,
     };
 
     const events = await this.fetchEvents(filter);
+    return events.length > 0 ? events[0] : null;
+  }
 
-    return events
-      .map((event) => {
-        try {
-          const content = JSON.parse(event.content);
-          return {
-            ...content,
-            eventId: event.id,
+  /**
+   * Legacy method - kept for compatibility but should transition to new NIP
+   */
+  public async getDeploymentHistory(publicKey?: string): Promise<any[]> {
+    const config = await this.getConfig();
+    const userConfig = config.getConfig();
+    const targetPubkey = publicKey || userConfig.nostr?.publicKey;
+
+    if (!targetPubkey) {
+      throw new Error('No public key provided');
+    }
+
+    // Look for static file events instead of deployment metadata
+    const events = await this.getStaticFileEvents(targetPubkey);
+
+    // Group by deployment (could be based on timestamp proximity)
+    const deployments = new Map();
+
+    events.forEach((event) => {
+      const dTag = event.tags.find((t) => t[0] === 'd')?.[1];
+      const xTag = event.tags.find((t) => t[0] === 'x')?.[1];
+
+      if (dTag && xTag) {
+        const deploymentKey = Math.floor(event.created_at / 3600); // Group by hour
+        if (!deployments.has(deploymentKey)) {
+          deployments.set(deploymentKey, {
+            files: [],
             createdAt: new Date(event.created_at * 1000),
-          };
-        } catch {
-          return null;
+            eventId: event.id,
+          });
         }
-      })
-      .filter(Boolean);
+        deployments.get(deploymentKey).files.push({ path: dTag, hash: xTag });
+      }
+    });
+
+    return Array.from(deployments.values());
   }
 
   public async close(): Promise<void> {

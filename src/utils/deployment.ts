@@ -1,8 +1,9 @@
 import axios from 'axios';
 import * as crypto from 'crypto';
+import * as path from 'path';
 import { BlossomManager } from './blossom';
 import { ConfigManager } from './config';
-import { NostrManager } from './nostr';
+import { NostrManager, StaticFileInfo } from './nostr';
 
 export interface SubdomainRequest {
   publicKey: string;
@@ -20,12 +21,12 @@ export interface SubdomainResponse {
 }
 
 export interface DeploymentResult {
-  subdomain: string;
+  npubSubdomain: string;
   fullUrl: string;
-  fileHash: string;
-  blossomManifestUrl: string;
-  nostrEventId: string;
+  staticFileEventIds: string[];
+  userServersEventId: string;
   deployedAt: Date;
+  fileCount: number;
 }
 
 export class DeploymentManager {
@@ -37,7 +38,7 @@ export class DeploymentManager {
   constructor() {
     this.blossom = new BlossomManager();
     this.nostr = new NostrManager();
-    this.deploymentServiceUrl = 'https://api.nostrsite.dev'; // Demo service URL
+    this.deploymentServiceUrl = 'https://api.nostrdeploy.com'; // Production service URL
   }
 
   private async getConfig(): Promise<ConfigManager> {
@@ -59,39 +60,68 @@ export class DeploymentManager {
     // Step 1: Validate build directory
     await this.validateBuildDirectory(buildDirectory);
 
-    // Step 2: Upload files to Blossom
+    // Step 2: Get npub subdomain
+    console.log('🔑 Generating npub subdomain...');
+    const npubSubdomain = await this.nostr.getNpubSubdomain();
+    console.log(`🌐 Subdomain: ${npubSubdomain}.nostrdeploy.com`);
+
+    // Step 3: Upload files to Blossom
     console.log('📤 Uploading files to Blossom server...');
     const uploadResults = await this.blossom.uploadDirectory(buildDirectory);
 
-    // Step 3: Create manifest
-    console.log('📋 Creating site manifest...');
-    const manifest = await this.blossom.createManifest(uploadResults);
+    // Step 4: Create static file info for Nostr events
+    console.log('📋 Preparing static file events...');
+    const staticFiles: StaticFileInfo[] = [];
 
-    // Step 4: Generate demo subdomain (since actual service doesn't exist)
-    console.log('🌐 Generating demo deployment info...');
+    for (const [filePath, uploadResult] of Object.entries(uploadResults)) {
+      // Convert file path to absolute path as required by NIP
+      const absolutePath = this.normalizeFilePath(filePath);
+      staticFiles.push({
+        path: absolutePath,
+        sha256: uploadResult.sha256,
+      });
+    }
+
+    // Step 5: Get Blossom server info
     const config = await this.getConfig();
     const userConfig = config.getConfig();
-    const demoSubdomain = this.generateDemoSubdomain(options.siteName || 'site');
+    const blossomServer = userConfig.blossom?.serverUrl || 'https://blossom.hzrd149.com';
 
-    // Step 5: Publish deployment metadata to Nostr
-    console.log('📡 Publishing deployment metadata to Nostr...');
-    const eventId = await this.nostr.publishDeploymentMetadata({
-      subdomain: demoSubdomain,
-      fileHash: manifest.sha256,
-      blossomUrl: this.blossom.getFileUrl(manifest.sha256),
+    // Step 6: Publish to Nostr according to Pubkey Static Websites NIP
+    console.log('📡 Publishing to Nostr using Pubkey Static Websites NIP...');
+    const nostrResult = await this.nostr.publishDeploymentMetadata({
+      npubSubdomain,
+      files: staticFiles,
+      blossomServers: [blossomServer],
       siteName: options.siteName,
     });
 
     console.log('✅ Deployment completed successfully!');
 
     return {
-      subdomain: demoSubdomain,
-      fullUrl: `${demoSubdomain}.nostrsite.dev`, // Demo URL
-      fileHash: manifest.sha256,
-      blossomManifestUrl: this.blossom.getFileUrl(manifest.sha256),
-      nostrEventId: eventId,
+      npubSubdomain,
+      fullUrl: `${npubSubdomain}.nostrdeploy.com`,
+      staticFileEventIds: nostrResult.staticFileEventIds,
+      userServersEventId: nostrResult.userServersEventId,
       deployedAt: new Date(),
+      fileCount: staticFiles.length,
     };
+  }
+
+  /**
+   * Normalize file path to absolute path format required by NIP
+   * Ensures path starts with / and uses forward slashes
+   */
+  private normalizeFilePath(filePath: string): string {
+    // Convert Windows paths to Unix-style
+    const normalizedPath = filePath.replace(/\\/g, '/');
+
+    // Ensure path starts with /
+    if (!normalizedPath.startsWith('/')) {
+      return '/' + normalizedPath;
+    }
+
+    return normalizedPath;
   }
 
   private async validateBuildDirectory(buildDirectory: string): Promise<void> {
@@ -101,17 +131,18 @@ export class DeploymentManager {
       throw new Error(`Build directory not found: ${buildDirectory}`);
     }
 
-    // Check for index.html
-    const indexPath = `${buildDirectory}/index.html`;
+    const indexPath = path.join(buildDirectory, 'index.html');
     if (!(await fs.pathExists(indexPath))) {
-      throw new Error('No index.html found in build directory');
+      throw new Error(`No index.html found in build directory: ${buildDirectory}`);
     }
-
-    console.log(`✓ Build directory validated: ${buildDirectory}`);
   }
 
+  /**
+   * Legacy method - kept for backwards compatibility
+   * New deployments should use npub subdomains
+   */
   private generateDemoSubdomain(siteName: string): string {
-    // Create a deterministic but unique subdomain based on site name and timestamp
+    console.warn('⚠️  Using legacy subdomain generation. Consider migrating to npub subdomains.');
     const timestamp = Date.now().toString(36);
     const hash = crypto.createHash('md5').update(siteName).digest('hex').substring(0, 6);
     return `${siteName.toLowerCase().replace(/[^a-z0-9]/g, '')}-${hash}-${timestamp}`;
@@ -151,26 +182,37 @@ export class DeploymentManager {
     return prefix ? `${prefix}-${randomString}` : randomString;
   }
 
-  public async getDeploymentStatus(subdomain: string): Promise<{
+  public async getDeploymentStatus(npubSubdomain: string): Promise<{
     status: 'active' | 'inactive' | 'error';
     lastChecked: Date;
     sslStatus: 'valid' | 'expired' | 'invalid';
     responseTime?: number;
+    fileCount?: number;
   }> {
     try {
       const startTime = Date.now();
       const baseDomain = await this.getBaseDomain();
-      const response = await axios.get(`https://${subdomain}.${baseDomain}`, {
+      const response = await axios.get(`https://${npubSubdomain}.${baseDomain}`, {
         timeout: 5000,
         validateStatus: (status) => status < 500, // Accept 4xx as valid responses
       });
       const responseTime = Date.now() - startTime;
+
+      // Try to get file count from Nostr events
+      let fileCount: number | undefined;
+      try {
+        const events = await this.nostr.getStaticFileEvents();
+        fileCount = events.length;
+      } catch (error) {
+        // Ignore errors when fetching file count
+      }
 
       return {
         status: response.status < 400 ? 'active' : 'error',
         lastChecked: new Date(),
         sslStatus: 'valid', // Would need proper SSL validation
         responseTime,
+        fileCount,
       };
     } catch (error) {
       return {
@@ -193,15 +235,15 @@ export class DeploymentManager {
   private async getBaseDomain(): Promise<string> {
     const config = await this.getConfig();
     const userConfig = config.getConfig();
-    return userConfig.deployment?.baseDomain || 'nostrsite.dev';
+    return userConfig.deployment?.baseDomain || 'nostrdeploy.com';
   }
 
-  public async deleteDeployment(subdomain: string): Promise<void> {
+  public async deleteDeployment(npubSubdomain: string): Promise<void> {
     try {
       const config = await this.getConfig();
       const userConfig = config.getConfig();
       // This would call your deployment service to remove the subdomain and DNS records
-      await axios.delete(`${this.deploymentServiceUrl}/api/deployment/${subdomain}`, {
+      await axios.delete(`${this.deploymentServiceUrl}/api/deployment/${npubSubdomain}`, {
         headers: {
           Authorization: `Nostr ${userConfig.nostr?.publicKey}`,
         },
@@ -209,5 +251,12 @@ export class DeploymentManager {
     } catch (error) {
       throw new Error(`Failed to delete deployment: ${error}`);
     }
+  }
+
+  /**
+   * Get current user's npub subdomain for status checks
+   */
+  public async getCurrentNpubSubdomain(): Promise<string> {
+    return this.nostr.getNpubSubdomain();
   }
 }

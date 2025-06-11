@@ -10,7 +10,7 @@ import { statusCommand } from './commands/status';
 const program = new Command();
 
 program
-  .name('nostr-deploy')
+  .name('nostr-deploy-cli')
   .description('Deploy static sites using Nostr protocol and Blossom servers')
   .version('1.0.0');
 
@@ -57,9 +57,9 @@ program
     );
 
     console.log(chalk.yellow('Quick Start:'));
-    console.log(chalk.white('1. Authenticate: ') + chalk.green('nostr-deploy auth'));
-    console.log(chalk.white('2. Configure: ') + chalk.green('nostr-deploy config'));
-    console.log(chalk.white('3. Deploy: ') + chalk.green('nostr-deploy deploy'));
+    console.log(chalk.white('1. Authenticate: ') + chalk.green('nostr-deploy-cli auth'));
+    console.log(chalk.white('2. Configure: ') + chalk.green('nostr-deploy-cli config'));
+    console.log(chalk.white('3. Deploy: ') + chalk.green('nostr-deploy-cli deploy'));
     console.log('');
 
     program.help();
@@ -70,7 +70,7 @@ program.on('command:*', () => {
   console.error(chalk.red(`Invalid command: ${program.args.join(' ')}`));
   console.log(
     chalk.yellow('Run ') +
-      chalk.green('nostr-deploy help') +
+      chalk.green('nostr-deploy-cli help') +
       chalk.yellow(' for available commands.')
   );
   process.exit(1);

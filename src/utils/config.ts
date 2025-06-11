@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { UserConfig } from '../types';
 
-const CONFIG_DIR = path.join(os.homedir(), '.nostr-deploy');
+const CONFIG_DIR = path.join(os.homedir(), '.nostr-deploy-cli');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 export class ConfigManager {
@@ -44,7 +44,7 @@ export class ConfigManager {
             serverUrl: 'https://blossom.primal.net',
           },
           deployment: {
-            baseDomain: 'nostrsite.dev',
+            baseDomain: 'nostrdeploy.com',
             sslProvider: 'letsencrypt',
           },
         };

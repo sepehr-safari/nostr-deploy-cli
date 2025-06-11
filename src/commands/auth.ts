@@ -101,12 +101,18 @@ export async function authCommand(options: AuthOptions): Promise<void> {
         }
 
         const privateKeyHex = Buffer.from(parsed.data).toString('hex');
-        const publicKeyHex = nostr.generateKeyPair().publicKey; // This would need to be derived from private key
+        const publicKeyHex = nostr.getPublicKeyFromPrivate(privateKeyHex);
 
         await config.setNostrKey(privateKeyHex, publicKeyHex);
 
         console.log(chalk.green('\n✅ Private key configured successfully!'));
         console.log(chalk.blue('🔑 You can now deploy and manage sites.'));
+
+        // Show the npub for reference
+        const npub = await nostr.getNpubSubdomain();
+        console.log(
+          chalk.white('📍 Your sites will be deployed to: ') + chalk.cyan(`${npub}.nostrdeploy.com`)
+        );
       } catch (error) {
         console.error(chalk.red(`\n❌ Error configuring private key: ${error}`));
         return;
@@ -161,9 +167,11 @@ export async function authCommand(options: AuthOptions): Promise<void> {
     console.log(chalk.cyan('\n🎉 Authentication setup complete!'));
     console.log(chalk.white('Next steps:'));
     console.log(
-      chalk.white('  1. Configure deployment settings: ') + chalk.green('nostr-deploy config')
+      chalk.white('  1. Configure deployment settings: ') + chalk.green('nostr-deploy-cli config')
     );
-    console.log(chalk.white('  2. Deploy your first site: ') + chalk.green('nostr-deploy deploy'));
+    console.log(
+      chalk.white('  2. Deploy your first site: ') + chalk.green('nostr-deploy-cli deploy')
+    );
   } catch (error) {
     console.error(chalk.red(`\n❌ Authentication failed: ${error}`));
     process.exit(1);

@@ -75,7 +75,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
             type: 'input',
             name: 'serverUrl',
             message: 'Enter Blossom server URL:',
-            default: currentConfig.blossom?.serverUrl || 'https://blossom.server.example.com',
+            default: currentConfig.blossom?.serverUrl || 'https://blossom.hzrd149.com',
             validate: (input: string) => {
               try {
                 new URL(input);
@@ -110,7 +110,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
           updatedConfig.deployment.sslProvider = sslInput.provider as 'letsencrypt' | 'cloudflare';
         } else {
           updatedConfig.deployment = {
-            baseDomain: 'nostrsite.dev',
+            baseDomain: 'nostrdeploy.com',
             sslProvider: sslInput.provider as 'letsencrypt' | 'cloudflare',
           };
         }
@@ -123,7 +123,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
     if (config.isConfigured()) {
       console.log(chalk.cyan('\n🎉 Configuration complete!'));
       console.log(
-        chalk.white('You can now deploy sites using: ') + chalk.green('nostr-deploy deploy')
+        chalk.white('You can now deploy sites using: ') + chalk.green('nostr-deploy-cli deploy')
       );
     } else {
       console.log(chalk.yellow('\n⚠️  Configuration incomplete.'));
@@ -131,7 +131,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
 
       const currentConfig = config.getConfig();
       if (!currentConfig.nostr?.publicKey) {
-        console.log(chalk.white('  • Authentication: ') + chalk.green('nostr-deploy auth'));
+        console.log(chalk.white('  • Authentication: ') + chalk.green('nostr-deploy-cli auth'));
       }
       if (!currentConfig.blossom?.serverUrl) {
         console.log(chalk.white('  • Blossom server URL'));
