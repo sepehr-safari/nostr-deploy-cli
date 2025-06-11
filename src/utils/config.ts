@@ -47,6 +47,10 @@ export class ConfigManager {
           nostr: {
             publicKey: '',
             relays: ['wss://nos.lol', 'wss://ditto.pub/relay', 'wss://relay.damus.io'],
+            pow: {
+              enabled: true,
+              targetDifficulty: 30,
+            },
           },
           blossom: {
             serverUrl: 'https://cdn.hzrd149.com',
@@ -65,7 +69,14 @@ export class ConfigManager {
   private parseEnvFile(content: string): Partial<UserConfig> {
     const lines = content.split('\n');
     const config: Partial<UserConfig> = {
-      nostr: { publicKey: '', relays: [] },
+      nostr: {
+        publicKey: '',
+        relays: [],
+        pow: {
+          enabled: true,
+          targetDifficulty: 30,
+        },
+      },
       blossom: { serverUrl: '' },
       deployment: { baseDomain: '' },
     };
@@ -140,13 +151,15 @@ export class ConfigManager {
       lines.push(`NOSTR_RELAYS=${this.config.nostr.relays.join(',')}`);
     }
 
-    // Add PoW configuration if present
-    if (this.config.nostr?.pow) {
-      lines.push(`NOSTR_POW_ENABLED=${this.config.nostr.pow.enabled}`);
-      lines.push(`NOSTR_POW_DIFFICULTY=${this.config.nostr.pow.targetDifficulty}`);
-      if (this.config.nostr.pow.timeout) {
-        lines.push(`NOSTR_POW_TIMEOUT=${this.config.nostr.pow.timeout}`);
-      }
+    lines.push('');
+    lines.push('# Proof of Work Configuration');
+
+    // Always add PoW configuration with defaults
+    const powConfig = this.config.nostr?.pow || { enabled: true, targetDifficulty: 30 };
+    lines.push(`NOSTR_POW_ENABLED=${powConfig.enabled}`);
+    lines.push(`NOSTR_POW_DIFFICULTY=${powConfig.targetDifficulty}`);
+    if (powConfig.timeout) {
+      lines.push(`NOSTR_POW_TIMEOUT=${powConfig.timeout}`);
     }
 
     lines.push('');
