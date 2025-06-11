@@ -118,7 +118,7 @@ nostr-deploy-cli deploy
 
 Your site is now live at `https://npub1abc123....nostrdeploy.com`!
 
-**Note:** Each project directory has its own `.env.nostr-deploy` configuration file with its own Nostr identity. This allows you to deploy different projects to different npub subdomains.
+**Note:** Each project directory has its own `.env.nostr-deploy.local` configuration file with its own Nostr identity. This allows you to deploy different projects to different npub subdomains.
 
 ## 📋 Commands
 
@@ -217,7 +217,7 @@ nostr-deploy-cli status -s npub1abc123...
 
 ## 🔧 Configuration
 
-Configuration is stored locally in each project directory as `.env.nostr-deploy`:
+Configuration is stored locally in each project directory as `.env.nostr-deploy.local`:
 
 ```bash
 # Nostr Deploy CLI Configuration
@@ -237,8 +237,8 @@ BASE_DOMAIN=nostrdeploy.com
 
 **Important Notes:**
 
-- Each project has its own `.env.nostr-deploy` configuration file
-- The `.env.nostr-deploy` file should be included in `.gitignore`
+- Each project has its own `.env.nostr-deploy.local` configuration file
+- The `.env.nostr-deploy.local` file should be included in `.gitignore`
 - Different projects can use different Nostr identities and settings
 - Private keys are stored locally and never shared between projects
 - Environment variable format makes it easy to integrate with CI/CD pipelines

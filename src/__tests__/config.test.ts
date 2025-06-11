@@ -6,6 +6,8 @@ jest.mock('fs-extra', () => ({
   ensureDir: jest.fn().mockResolvedValue(undefined),
   writeJSON: jest.fn().mockResolvedValue(undefined),
   readJSON: jest.fn().mockResolvedValue({}),
+  writeFile: jest.fn().mockResolvedValue(undefined),
+  readFile: jest.fn().mockResolvedValue(''),
 }));
 
 describe('ConfigManager', () => {

@@ -2,7 +2,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { UserConfig } from '../types';
 
-const CONFIG_FILE = '.env.nostr-deploy';
+const CONFIG_FILE = '.env.nostr-deploy.local';
 
 export class ConfigManager {
   private static instance: ConfigManager;

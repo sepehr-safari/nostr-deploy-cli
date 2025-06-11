@@ -78,7 +78,9 @@ program
     console.log(chalk.white('4. Deploy your site: ') + chalk.green('nostr-deploy-cli deploy'));
     console.log('');
 
-    console.log(chalk.gray('💡 Note: Configuration is stored locally in .env.nostr-deploy file'));
+    console.log(
+      chalk.gray('💡 Note: Configuration is stored locally in .env.nostr-deploy.local file')
+    );
     console.log(chalk.gray('   Each project can have its own Nostr identity and settings'));
     console.log('');
 

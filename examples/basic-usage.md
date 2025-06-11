@@ -2,7 +2,7 @@
 
 This document shows how to use the Nostr Deploy CLI with the **Pubkey Static Websites NIP** standard, where your Nostr public key (npub) becomes your unique subdomain.
 
-**Note**: Each project directory has its own local configuration stored in `.env.nostr-deploy` file. This allows different projects to use different Nostr identities.
+**Note**: Each project directory has its own local configuration stored in `.env.nostr-deploy.local` file. This allows different projects to use different Nostr identities.
 
 ## First Time Setup
 
