@@ -38,10 +38,10 @@ export class ConfigManager {
         this.config = {
           nostr: {
             publicKey: '',
-            relays: ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band'],
+            relays: ['wss://nos.lol', 'wss://ditto.pub/relay', 'wss://relay.damus.io'],
           },
           blossom: {
-            serverUrl: 'https://blossom.primal.net',
+            serverUrl: 'https://cdn.hzrd149.com',
           },
           deployment: {
             baseDomain: 'nostrdeploy.com',

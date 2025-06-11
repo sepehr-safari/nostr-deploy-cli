@@ -13,7 +13,7 @@ export interface BlossomUploadResponse {
 
 export class BlossomManager {
   private config: ConfigManager | null = null;
-  private baseUrl: string = 'https://blossom.primal.net';
+  private baseUrl: string = 'https://cdn.hzrd149.com';
 
   constructor() {
     // Initialize with default URL, will be updated when config is loaded
@@ -23,7 +23,7 @@ export class BlossomManager {
     if (!this.config) {
       this.config = await ConfigManager.getInstance();
       const userConfig = this.config.getConfig();
-      this.baseUrl = userConfig.blossom?.serverUrl || 'https://blossom.primal.net';
+      this.baseUrl = userConfig.blossom?.serverUrl || 'https://cdn.hzrd149.com';
     }
     return this.config;
   }

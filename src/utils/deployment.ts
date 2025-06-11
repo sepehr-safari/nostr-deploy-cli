@@ -81,7 +81,7 @@ export class DeploymentManager {
     // Step 5: Get Blossom server info
     const config = await this.getConfig();
     const userConfig = config.getConfig();
-    const blossomServer = userConfig.blossom?.serverUrl || 'https://blossom.hzrd149.com';
+    const blossomServer = userConfig.blossom?.serverUrl || 'https://cdn.hzrd149.com';
 
     // Step 6: Publish to Nostr according to Pubkey Static Websites NIP
     console.log('📡 Publishing to Nostr using Pubkey Static Websites NIP...');

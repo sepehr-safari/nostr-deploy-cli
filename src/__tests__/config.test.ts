@@ -11,25 +11,25 @@ jest.mock('fs-extra', () => ({
 describe('ConfigManager', () => {
   let configManager: ConfigManager;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset singleton instance for each test
     (ConfigManager as any).instance = undefined;
-    configManager = ConfigManager.getInstance();
+    configManager = await ConfigManager.getInstance();
   });
 
-  it('should create a singleton instance', () => {
-    const instance1 = ConfigManager.getInstance();
-    const instance2 = ConfigManager.getInstance();
+  it('should create a singleton instance', async () => {
+    const instance1 = await ConfigManager.getInstance();
+    const instance2 = await ConfigManager.getInstance();
     expect(instance1).toBe(instance2);
   });
 
   it('should have default configuration when not configured', async () => {
     const config = configManager.getConfig();
     expect(config).toBeDefined();
-    expect(config.nostr?.relays).toContain('wss://relay.damus.io');
+    expect(config.nostr?.relays).toContain('wss://nos.lol');
   });
 
-  it('should identify when configuration is incomplete', () => {
+  it('should identify when configuration is incomplete', async () => {
     const isConfigured = configManager.isConfigured();
     expect(isConfigured).toBe(false);
   });

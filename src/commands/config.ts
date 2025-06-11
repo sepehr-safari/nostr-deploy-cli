@@ -56,7 +56,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
             message: 'Enter Nostr relay URLs (comma-separated):',
             default:
               currentConfig.nostr?.relays?.join(', ') ||
-              'wss://relay.damus.io,wss://nos.lol,wss://relay.nostr.band',
+              'wss://nos.lol,wss://ditto.pub/relay,wss://relay.damus.io',
             filter: (input: string) =>
               input
                 .split(',')
@@ -75,7 +75,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
             type: 'input',
             name: 'serverUrl',
             message: 'Enter Blossom server URL:',
-            default: currentConfig.blossom?.serverUrl || 'https://blossom.hzrd149.com',
+            default: currentConfig.blossom?.serverUrl || 'https://cdn.hzrd149.com',
             validate: (input: string) => {
               try {
                 new URL(input);
