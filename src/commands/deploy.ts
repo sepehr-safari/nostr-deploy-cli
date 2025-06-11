@@ -146,6 +146,9 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
         chalk.white('Each file is published as a kind 34128 event with path and hash information.')
       );
       console.log(chalk.white('Your npub serves as your unique subdomain identifier.'));
+
+      // Exit successfully after deployment
+      process.exit(0);
     } catch (error) {
       if (spinner) spinner.fail('Deployment failed');
       throw error;
