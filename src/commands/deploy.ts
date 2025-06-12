@@ -202,7 +202,26 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       return;
     }
 
-    const files = await fs.readdir(buildDir);
+    // Get all files recursively to show accurate count
+    const getAllFiles = async (dirPath: string): Promise<string[]> => {
+      const files: string[] = [];
+      const items = await fs.readdir(dirPath, { withFileTypes: true });
+
+      for (const item of items) {
+        const fullPath = `${dirPath}/${item.name}`;
+
+        if (item.isDirectory()) {
+          const subFiles = await getAllFiles(fullPath);
+          files.push(...subFiles);
+        } else {
+          files.push(fullPath);
+        }
+      }
+
+      return files;
+    };
+
+    const files = await getAllFiles(buildDir);
     if (files.length === 0) {
       console.log(chalk.red(`❌ Build directory is empty: ${buildDir}`));
       return;
