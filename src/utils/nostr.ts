@@ -57,7 +57,10 @@ export class NostrManager {
     content: string,
     kind: number = 1,
     tags: string[][] = []
-  ): Promise<string> {
+  ): Promise<{
+    eventId: string;
+    relayResults: { relay: string; success: boolean; error?: string }[];
+  }> {
     const config = await this.getConfig();
     const userConfig = config.getConfig();
 
@@ -84,13 +87,32 @@ export class NostrManager {
       throw new Error('No relays configured');
     }
 
-    try {
-      await Promise.all(this.pool.publish(relays, event));
+    // Publish to each relay individually and collect results
+    const relayResults = await Promise.all(
+      relays.map(async (relay) => {
+        try {
+          await this.pool.publish([relay], event);
+          return { relay, success: true };
+        } catch (error) {
+          return {
+            relay,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      })
+    );
 
-      return event.id;
-    } catch (error) {
-      throw new Error(`Failed to publish event: ${error}`);
+    // Check if at least one relay accepted the event
+    const hasSuccess = relayResults.some((result) => result.success);
+    if (!hasSuccess) {
+      throw new Error('Failed to publish event to any relay');
     }
+
+    return {
+      eventId: event.id,
+      relayResults,
+    };
   }
 
   public async fetchEvents(filter: any, relays?: string[]): Promise<NostrEvent[]> {
@@ -114,12 +136,16 @@ export class NostrManager {
    * Publish static file events according to Pubkey Static Websites NIP
    * Kind 34128 events with d (absolute path) and x (sha256 hash) tags
    */
-  public async publishStaticFileEvents(files: StaticFileInfo[]): Promise<string[]> {
-    const eventIds: string[] = [];
+  public async publishStaticFileEvents(
+    files: StaticFileInfo[]
+  ): Promise<
+    { eventId: string; relayResults: { relay: string; success: boolean; error?: string }[] }[]
+  > {
+    const eventResults = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const eventId = await this.publishEvent(
+      const result = await this.publishEvent(
         '', // Empty content as per NIP
         34128, // Kind for static file definition
         [
@@ -127,7 +153,7 @@ export class NostrManager {
           ['x', file.sha256], // SHA256 hash of the file
         ]
       );
-      eventIds.push(eventId);
+      eventResults.push(result);
 
       // Add delay between publishing events to avoid rate limits on nostr relays
       if (i < files.length - 1) {
@@ -135,13 +161,16 @@ export class NostrManager {
       }
     }
 
-    return eventIds;
+    return eventResults;
   }
 
   /**
    * Publish a BUD-03 user servers event (kind 10063) to specify Blossom servers
    */
-  public async publishUserServersEvent(blossomServers: string[]): Promise<string> {
+  public async publishUserServersEvent(blossomServers: string[]): Promise<{
+    eventId: string;
+    relayResults: { relay: string; success: boolean; error?: string }[];
+  }> {
     const content = '';
     const tags = blossomServers.map((server) => ['server', server]);
 
@@ -176,16 +205,27 @@ export class NostrManager {
     npubSubdomain: string;
     files: StaticFileInfo[];
     blossomServers: string[];
-  }): Promise<{ staticFileEventIds: string[]; userServersEventId: string }> {
+  }): Promise<{
+    staticFileEventResults: {
+      eventId: string;
+      relayResults: { relay: string; success: boolean; error?: string }[];
+    }[];
+    userServersEventResult: {
+      eventId: string;
+      relayResults: { relay: string; success: boolean; error?: string }[];
+    };
+  }> {
     console.log('📡 Publishing static file events (kind 34128)...');
-    const staticFileEventIds = await this.publishStaticFileEvents(deploymentInfo.files);
+    const staticFileEventResults = await this.publishStaticFileEvents(deploymentInfo.files);
 
     console.log('📡 Publishing user servers event (kind 10063)...');
-    const userServersEventId = await this.publishUserServersEvent(deploymentInfo.blossomServers);
+    const userServersEventResult = await this.publishUserServersEvent(
+      deploymentInfo.blossomServers
+    );
 
     return {
-      staticFileEventIds,
-      userServersEventId,
+      staticFileEventResults,
+      userServersEventResult,
     };
   }
 

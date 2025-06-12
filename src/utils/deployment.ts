@@ -7,8 +7,14 @@ import { NostrManager, StaticFileInfo } from './nostr';
 export interface DeploymentResult {
   npubSubdomain: string;
   fullUrl: string;
-  staticFileEventIds: string[];
-  userServersEventId: string;
+  staticFileEventResults: {
+    eventId: string;
+    relayResults: { relay: string; success: boolean; error?: string }[];
+  }[];
+  userServersEventResult: {
+    eventId: string;
+    relayResults: { relay: string; success: boolean; error?: string }[];
+  };
   deployedAt: Date;
   fileCount: number;
 }
@@ -76,8 +82,8 @@ export class DeploymentManager {
     return {
       npubSubdomain,
       fullUrl: `${npubSubdomain}.nostrdeploy.com`,
-      staticFileEventIds: nostrResult.staticFileEventIds,
-      userServersEventId: nostrResult.userServersEventId,
+      staticFileEventResults: nostrResult.staticFileEventResults,
+      userServersEventResult: nostrResult.userServersEventResult,
       deployedAt: new Date(),
       fileCount: staticFiles.length,
     };
