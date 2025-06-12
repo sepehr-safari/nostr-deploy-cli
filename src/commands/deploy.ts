@@ -225,20 +225,51 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       console.log(chalk.white('  📅 Deployed: ') + chalk.gray(result.deployedAt.toLocaleString()));
       console.log(chalk.white('  📁 Files: ') + chalk.yellow(result.fileCount.toString()));
 
-      if (result.staticFileEventIds && result.staticFileEventIds.length > 0) {
+      if (result.staticFileEventResults && result.staticFileEventResults.length > 0) {
         console.log(chalk.white('  📡 Static File Events:'));
-        result.staticFileEventIds.forEach((eventId: string, index: number) => {
+        result.staticFileEventResults.forEach((eventResult, index: number) => {
           console.log(
-            chalk.white(`    ${index + 1}. `) + chalk.gray(eventId.substring(0, 16) + '...')
+            chalk.white(`    ${index + 1}. `) +
+              chalk.gray(eventResult.eventId.substring(0, 16) + '...')
           );
+          // Show relay status for each event
+          const successCount = eventResult.relayResults.filter((r) => r.success).length;
+          const totalCount = eventResult.relayResults.length;
+          if (successCount === totalCount) {
+            console.log(chalk.white(`       ✅ Published to all ${totalCount} relays`));
+          } else {
+            console.log(
+              chalk.yellow(`       ⚠️  Published to ${successCount}/${totalCount} relays`)
+            );
+            eventResult.relayResults.forEach((result) => {
+              if (!result.success) {
+                console.log(chalk.red(`         ❌ ${result.relay}: ${result.error}`));
+              }
+            });
+          }
         });
       }
 
-      if (result.userServersEventId) {
+      if (result.userServersEventResult) {
         console.log(
           chalk.white('  🌸 User Servers Event: ') +
-            chalk.gray(result.userServersEventId.substring(0, 16) + '...')
+            chalk.gray(result.userServersEventResult.eventId.substring(0, 16) + '...')
         );
+        // Show relay status for user servers event
+        const successCount = result.userServersEventResult.relayResults.filter(
+          (r) => r.success
+        ).length;
+        const totalCount = result.userServersEventResult.relayResults.length;
+        if (successCount === totalCount) {
+          console.log(chalk.white(`       ✅ Published to all ${totalCount} relays`));
+        } else {
+          console.log(chalk.yellow(`       ⚠️  Published to ${successCount}/${totalCount} relays`));
+          result.userServersEventResult.relayResults.forEach((result) => {
+            if (!result.success) {
+              console.log(chalk.red(`         ❌ ${result.relay}: ${result.error}`));
+            }
+          });
+        }
       }
 
       console.log(chalk.cyan('\n📖 About this deployment:'));
