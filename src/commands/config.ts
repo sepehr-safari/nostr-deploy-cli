@@ -39,8 +39,8 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
     }
 
     if (options.blossom) {
-      await config.setBlossomServer(options.blossom);
-      console.log(chalk.green(`✅ Updated Blossom server: ${options.blossom}`));
+      await config.setBlossomServers([options.blossom]);
+      console.log(chalk.green(`✅ Updated Blossom servers: ${options.blossom}`));
     }
 
     if (options.domain) {
@@ -64,8 +64,8 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
           chalk.gray(currentConfig.nostr?.relays?.join(', ') || 'Not configured')
       );
       console.log(
-        chalk.white('  Blossom server: ') +
-          chalk.gray(currentConfig.blossom?.serverUrl || 'Not configured')
+        chalk.white('  Blossom servers: ') +
+          chalk.gray((currentConfig.blossom?.servers || []).join(', ') || 'Not configured')
       );
       console.log(
         chalk.white('  Base domain: ') +
@@ -79,7 +79,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
           message: 'What would you like to configure for this project?',
           choices: [
             { name: '📡 Nostr Relays', value: 'relays' },
-            { name: '🌸 Blossom Server', value: 'blossom' },
+            { name: '🌸 Blossom Servers', value: 'blossom' },
             { name: '🌐 Base Domain', value: 'domain' },
           ],
         },
@@ -123,22 +123,33 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
         const blossomInput = await inquirer.prompt([
           {
             type: 'input',
-            name: 'serverUrl',
-            message: 'Enter Blossom server URL:',
-            default: currentConfig.blossom?.serverUrl || 'https://cdn.hzrd149.com',
+            name: 'servers',
+            message: 'Enter Blossom server URLs (comma-separated):',
+            default: (currentConfig.blossom?.servers || ['https://cdn.hzrd149.com']).join(', '),
             validate: (input: string) => {
-              try {
-                new URL(input);
-                return true;
-              } catch {
-                return 'Please enter a valid URL';
+              const servers = input
+                .split(',')
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0);
+              if (servers.length === 0) {
+                return 'Please enter at least one server URL';
               }
+              for (const server of servers) {
+                if (!server.startsWith('http://') && !server.startsWith('https://')) {
+                  return `Invalid URL: ${server}. URLs must start with http:// or https://`;
+                }
+              }
+              return true;
             },
           },
         ]);
 
-        await config.setBlossomServer(blossomInput.serverUrl);
-        console.log(chalk.green(`✅ Updated Blossom server: ${blossomInput.serverUrl}`));
+        const servers = blossomInput.servers
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0);
+        await config.setBlossomServers(servers);
+        console.log(chalk.green(`✅ Updated Blossom servers: ${servers.join(', ')}`));
       }
 
       if (configChoice.settings.includes('domain')) {
@@ -188,8 +199,8 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
       if (!currentConfig.nostr?.publicKey) {
         console.log(chalk.white('  • Authentication: ') + chalk.green('nostr-deploy-cli auth'));
       }
-      if (!currentConfig.blossom?.serverUrl) {
-        console.log(chalk.white('  • Blossom server URL'));
+      if (!currentConfig.blossom?.servers || currentConfig.blossom.servers.length === 0) {
+        console.log(chalk.white('  • Blossom server URLs'));
       }
 
       console.log(chalk.white('  • View current status: ') + chalk.green('nostr-deploy-cli info'));

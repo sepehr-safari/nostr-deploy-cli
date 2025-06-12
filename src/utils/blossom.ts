@@ -9,45 +9,125 @@ export interface BlossomUploadResponse {
   size: number;
   type: string;
   uploaded?: string;
+  server?: string;
+}
+
+export interface BlossomServerResult {
+  server: string;
+  success: boolean;
+  error?: string;
+  uploadResponse?: BlossomUploadResponse;
+}
+
+export interface BlossomFileResult {
+  filename: string;
+  sha256: string;
+  serverResults: BlossomServerResult[];
+  hasSuccess: boolean;
 }
 
 export class BlossomManager {
   private config: ConfigManager | null = null;
-  private baseUrl: string = 'https://cdn.hzrd149.com';
+  private servers: string[] = ['https://cdn.hzrd149.com'];
 
   constructor() {
-    // Initialize with default URL, will be updated when config is loaded
+    // Initialize with default servers, will be updated when config is loaded
   }
 
   private async getConfig(): Promise<ConfigManager> {
     if (!this.config) {
       this.config = await ConfigManager.getInstance();
       const userConfig = this.config.getConfig();
-      this.baseUrl = userConfig.blossom?.serverUrl || 'https://cdn.hzrd149.com';
+      this.servers = userConfig.blossom?.servers || ['https://cdn.hzrd149.com'];
     }
     return this.config;
   }
 
-  public async uploadFiles(filePaths: string[]): Promise<BlossomUploadResponse[]> {
-    const results: BlossomUploadResponse[] = [];
+  public async uploadFiles(filePaths: string[]): Promise<BlossomFileResult[]> {
+    const results: BlossomFileResult[] = [];
 
-    for (const filePath of filePaths) {
+    // Upload files in parallel for better performance
+    const uploadPromises = filePaths.map(async (filePath) => {
       try {
-        const result = await this.uploadSingleFile(filePath);
-        results.push(result);
+        return await this.uploadSingleFileToAllServers(filePath);
       } catch (error) {
-        throw new Error(`Failed to upload ${filePath}: ${error}`);
+        const filename = filePath.split('/').pop() || 'unknown';
+        return {
+          filename,
+          sha256: '',
+          serverResults: this.servers.map((server) => ({
+            server,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          })),
+          hasSuccess: false,
+        };
       }
-    }
+    });
+
+    const uploadResults = await Promise.all(uploadPromises);
+    results.push(...uploadResults);
 
     return results;
   }
 
-  private async uploadSingleFile(filePath: string): Promise<BlossomUploadResponse> {
+  private async uploadSingleFileToAllServers(filePath: string): Promise<BlossomFileResult> {
     if (!(await fs.pathExists(filePath))) {
       throw new Error(`File not found: ${filePath}`);
     }
 
+    const fileBuffer = await fs.readFile(filePath);
+    const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    const filename = filePath; // Use full path, will be converted to relative later
+
+    // Upload to all servers in parallel
+    const serverResults = await Promise.allSettled(
+      this.servers.map(async (server) => {
+        try {
+          const uploadResponse = await this.uploadSingleFileToServer(filePath, server);
+          return {
+            server,
+            success: true,
+            uploadResponse,
+          };
+        } catch (error) {
+          return {
+            server,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      })
+    );
+
+    // Process settled results
+    const processedResults = serverResults.map((result, index) => {
+      const server = this.servers[index];
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        return {
+          server,
+          success: false,
+          error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+        };
+      }
+    });
+
+    const hasSuccess = processedResults.some((result) => result.success);
+
+    return {
+      filename,
+      sha256: fileHash,
+      serverResults: processedResults,
+      hasSuccess,
+    };
+  }
+
+  private async uploadSingleFileToServer(
+    filePath: string,
+    serverUrl: string
+  ): Promise<BlossomUploadResponse> {
     const fileBuffer = await fs.readFile(filePath);
     const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
     const fileName = filePath.split('/').pop() || 'unknown';
@@ -55,15 +135,15 @@ export class BlossomManager {
 
     // Check if file already exists using GET request
     try {
-      const existingFile = await this.getBlob(fileHash);
+      const existingFile = await this.getBlob(fileHash, serverUrl);
       if (existingFile) {
-        console.log(`  File already exists: ${fileName}`);
         return {
-          url: `${this.baseUrl}/${fileHash}`,
+          url: `${serverUrl}/${fileHash}`,
           sha256: fileHash,
           size: fileBuffer.length,
           type: mimeType,
           uploaded: new Date().toISOString(),
+          server: serverUrl,
         };
       }
     } catch {
@@ -71,7 +151,12 @@ export class BlossomManager {
     }
 
     // Step 1: Check upload requirements using HEAD /upload (BUD-06)
-    const canUpload = await this.checkUploadRequirements(fileHash, fileBuffer.length, mimeType);
+    const canUpload = await this.checkUploadRequirements(
+      fileHash,
+      fileBuffer.length,
+      mimeType,
+      serverUrl
+    );
     if (!canUpload.allowed) {
       throw new Error(`Upload rejected: ${canUpload.reason}`);
     }
@@ -84,7 +169,7 @@ export class BlossomManager {
 
     // Step 3: Upload the file using PUT /upload (BUD-02)
     try {
-      const response: AxiosResponse = await axios.put(`${this.baseUrl}/upload`, fileBuffer, {
+      const response: AxiosResponse = await axios.put(`${serverUrl}/upload`, fileBuffer, {
         headers: {
           'Content-Type': mimeType,
           'Content-Length': fileBuffer.length.toString(),
@@ -98,11 +183,12 @@ export class BlossomManager {
       if (response.status === 200 || response.status === 201) {
         const responseData = response.data;
         return {
-          url: responseData?.url || `${this.baseUrl}/${fileHash}`,
+          url: responseData?.url || `${serverUrl}/${fileHash}`,
           sha256: responseData?.sha256 || fileHash,
           size: responseData?.size || fileBuffer.length,
           type: responseData?.type || mimeType,
           uploaded: responseData?.uploaded || new Date().toISOString(),
+          server: serverUrl,
         };
       } else {
         throw new Error(`Upload failed with status: ${response.status}`);
@@ -123,7 +209,8 @@ export class BlossomManager {
   private async checkUploadRequirements(
     sha256: string,
     size: number,
-    mimeType: string
+    mimeType: string,
+    serverUrl: string
   ): Promise<{
     allowed: boolean;
     requiresAuth: boolean;
@@ -131,7 +218,7 @@ export class BlossomManager {
   }> {
     try {
       // BUD-06: Check upload requirements using HEAD /upload
-      const response = await axios.head(`${this.baseUrl}/upload`, {
+      const response = await axios.head(`${serverUrl}/upload`, {
         headers: {
           'X-SHA-256': sha256,
           'X-Content-Length': size.toString(),
@@ -219,9 +306,9 @@ export class BlossomManager {
     }
   }
 
-  public async getBlob(sha256: string): Promise<Buffer | null> {
+  public async getBlob(sha256: string, serverUrl: string): Promise<Buffer | null> {
     try {
-      const response = await axios.get(`${this.baseUrl}/${sha256}`, {
+      const response = await axios.get(`${serverUrl}/${sha256}`, {
         responseType: 'arraybuffer',
         timeout: 30000,
       });
@@ -236,26 +323,45 @@ export class BlossomManager {
 
   public async uploadDirectory(
     dirPath: string
-  ): Promise<{ [filename: string]: BlossomUploadResponse }> {
+  ): Promise<{ [filename: string]: BlossomFileResult }> {
     if (!(await fs.pathExists(dirPath))) {
       throw new Error(`Directory not found: ${dirPath}`);
     }
 
     const files = await this.getAllFiles(dirPath);
-    const results: { [filename: string]: BlossomUploadResponse } = {};
+    const results: { [filename: string]: BlossomFileResult } = {};
 
-    console.log(`📤 Uploading ${files.length} files to Blossom server...`);
+    console.log(
+      `📤 Uploading ${files.length} files to ${this.servers.length} Blossom server(s)...`
+    );
 
-    for (const file of files) {
-      try {
-        const relativePath = file.replace(dirPath + '/', '').replace(dirPath + '\\', '');
-        console.log(`  Uploading: ${relativePath}`);
-        const uploadResult = await this.uploadSingleFile(file);
-        results[relativePath] = uploadResult;
-      } catch (error) {
-        throw new Error(`Failed to upload ${file}: ${error}`);
+    const uploadResults = await this.uploadFiles(files);
+
+    uploadResults.forEach((result) => {
+      const relativePath = result.filename.replace(dirPath + '/', '').replace(dirPath + '\\', '');
+      results[relativePath] = result;
+
+      // Log upload status for each file
+      if (result.hasSuccess) {
+        const successCount = result.serverResults.filter((r) => r.success).length;
+        const totalCount = result.serverResults.length;
+        if (successCount === totalCount) {
+          console.log(`  ✅ ${relativePath}: Uploaded to all ${totalCount} servers`);
+        } else {
+          console.log(`  ⚠️  ${relativePath}: Uploaded to ${successCount}/${totalCount} servers`);
+          result.serverResults.forEach((serverResult) => {
+            if (!serverResult.success) {
+              console.log(`     ❌ ${serverResult.server}: ${serverResult.error}`);
+            }
+          });
+        }
+      } else {
+        console.log(`  ❌ ${relativePath}: Failed to upload to any server`);
+        result.serverResults.forEach((serverResult) => {
+          console.log(`     ❌ ${serverResult.server}: ${serverResult.error}`);
+        });
       }
-    }
+    });
 
     return results;
   }
@@ -279,8 +385,8 @@ export class BlossomManager {
   }
 
   public async createManifest(uploadResults: {
-    [filename: string]: BlossomUploadResponse;
-  }): Promise<BlossomUploadResponse> {
+    [filename: string]: BlossomFileResult;
+  }): Promise<BlossomFileResult> {
     const manifest = {
       type: 'static-site-manifest',
       files: uploadResults,
@@ -294,7 +400,7 @@ export class BlossomManager {
     await fs.writeFile(tempManifestPath, manifestBuffer);
 
     try {
-      const result = await this.uploadSingleFile(tempManifestPath);
+      const result = await this.uploadSingleFileToAllServers(tempManifestPath);
       await fs.remove(tempManifestPath); // Clean up temp file
       return result;
     } catch (error) {
@@ -303,9 +409,11 @@ export class BlossomManager {
     }
   }
 
-  public async downloadFile(sha256: string, outputPath: string): Promise<void> {
+  public async downloadFile(sha256: string, outputPath: string, serverUrl?: string): Promise<void> {
+    const targetServer = serverUrl || this.servers[0];
+
     try {
-      const response = await axios.get(`${this.baseUrl}/${sha256}`, {
+      const response = await axios.get(`${targetServer}/${sha256}`, {
         responseType: 'stream',
         timeout: 30000,
       });
@@ -322,11 +430,13 @@ export class BlossomManager {
     }
   }
 
-  public async deleteFile(sha256: string): Promise<void> {
+  public async deleteFile(sha256: string, serverUrl?: string): Promise<void> {
+    const targetServer = serverUrl || this.servers[0];
+
     try {
       const authHeader = await this.createBlossomAuthEvent('delete', sha256, 'file');
 
-      await axios.delete(`${this.baseUrl}/${sha256}`, {
+      await axios.delete(`${targetServer}/${sha256}`, {
         headers: {
           Authorization: authHeader,
         },
@@ -372,7 +482,8 @@ export class BlossomManager {
     return mimeTypes[extension || ''] || 'application/octet-stream';
   }
 
-  public getFileUrl(sha256: string): string {
-    return `${this.baseUrl}/${sha256}`;
+  public getFileUrl(sha256: string, serverUrl?: string): string {
+    const targetServer = serverUrl || this.servers[0];
+    return `${targetServer}/${sha256}`;
   }
 }

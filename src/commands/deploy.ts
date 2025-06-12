@@ -46,9 +46,9 @@ async function performAutoSetup(): Promise<void> {
         console.log(chalk.green('✅ Set up default Nostr relays'));
       }
 
-      if (!userConfig.blossom?.serverUrl) {
-        await config.setBlossomServer('https://blossom.primal.net');
-        console.log(chalk.green('✅ Set up default Blossom server'));
+      if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
+        await config.setBlossomServers(['https://blossom.primal.net']);
+        console.log(chalk.green('✅ Set up default Blossom servers'));
       }
 
       if (!userConfig.deployment?.baseDomain) {
@@ -84,8 +84,8 @@ async function performAutoSetup(): Promise<void> {
 
   // Set up minimal blossom config with a default server
   const userConfig = config.getConfig();
-  if (!userConfig.blossom?.serverUrl) {
-    await config.setBlossomServer('https://blossom.primal.net');
+  if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
+    await config.setBlossomServers(['https://blossom.primal.net']);
   }
 
   // Set up default domain if not configured
@@ -152,7 +152,7 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
               chalk.white(' - Set up authentication')
           );
         }
-        if (!userConfig.blossom?.serverUrl) {
+        if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
           console.log(
             chalk.white('  • ') +
               chalk.green('nostr-deploy-cli config') +

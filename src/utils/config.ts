@@ -43,18 +43,12 @@ export class ConfigManager {
         this.config = this.parseEnvFile(envContent);
       } else {
         // Create default config structure (don't save to file)
-        this.config = {
-          nostr: {
-            publicKey: '',
-            relays: ['wss://relay.nostr.band'],
-          },
-          blossom: {
-            serverUrl: 'https://cdn.hzrd149.com',
-          },
-          deployment: {
-            baseDomain: 'nostrdeploy.com',
-          },
+        const defaultConfig: UserConfig = {
+          nostr: { publicKey: '', relays: [] },
+          blossom: { servers: [] },
+          deployment: { baseDomain: 'nostrdeploy.com' },
         };
+        this.config = defaultConfig;
       }
     } catch (error) {
       console.error('Error loading config:', error);
@@ -69,7 +63,7 @@ export class ConfigManager {
         publicKey: '',
         relays: [],
       },
-      blossom: { serverUrl: '' },
+      blossom: { servers: [] },
       deployment: { baseDomain: '' },
     };
 
@@ -97,7 +91,10 @@ export class ConfigManager {
           break;
 
         case 'BLOSSOM_SERVER_URL':
-          if (config.blossom) config.blossom.serverUrl = cleanValue;
+          if (config.blossom) config.blossom.servers = [cleanValue];
+          break;
+        case 'BLOSSOM_SERVERS':
+          if (config.blossom) config.blossom.servers = cleanValue.split(',').map((s) => s.trim());
           break;
         case 'BASE_DOMAIN':
           if (config.deployment) config.deployment.baseDomain = cleanValue;
@@ -130,8 +127,8 @@ export class ConfigManager {
 
     // Blossom configuration
     lines.push('# Blossom File Storage');
-    if (this.config.blossom?.serverUrl) {
-      lines.push(`BLOSSOM_SERVER_URL=${this.config.blossom.serverUrl}`);
+    if (this.config.blossom?.servers && this.config.blossom.servers.length > 0) {
+      lines.push(`BLOSSOM_SERVERS=${this.config.blossom.servers.join(',')}`);
     }
 
     lines.push('');
@@ -182,12 +179,16 @@ export class ConfigManager {
     await this.saveConfig();
   }
 
-  public async setBlossomServer(serverUrl: string): Promise<void> {
+  public async setBlossomServers(servers: string[]): Promise<void> {
     if (!this.config.blossom) {
-      this.config.blossom = { serverUrl: '' };
+      this.config.blossom = { servers: [] };
     }
-    this.config.blossom.serverUrl = serverUrl;
+    this.config.blossom.servers = servers;
     await this.saveConfig();
+  }
+
+  public async setBlossomServer(serverUrl: string): Promise<void> {
+    await this.setBlossomServers([serverUrl]);
   }
 
   public async setBaseDomain(baseDomain: string): Promise<void> {
@@ -201,6 +202,10 @@ export class ConfigManager {
   }
 
   public isConfigured(): boolean {
-    return !!(this.config.nostr?.publicKey && this.config.blossom?.serverUrl);
+    return !!(
+      this.config.nostr?.publicKey &&
+      this.config.blossom?.servers &&
+      this.config.blossom.servers.length > 0
+    );
   }
 }

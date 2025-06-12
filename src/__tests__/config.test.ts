@@ -28,7 +28,8 @@ describe('ConfigManager', () => {
   it('should have default configuration when not configured', async () => {
     const config = configManager.getConfig();
     expect(config).toBeDefined();
-    expect(config.nostr?.relays).toContain('wss://relay.nostr.band');
+    expect(config.nostr?.relays).toEqual([]);
+    expect(config.blossom?.servers).toEqual([]);
   });
 
   it('should identify when configuration is incomplete', async () => {
@@ -60,12 +61,10 @@ describe('ConfigManager', () => {
     expect(config.nostr?.relays).toEqual(testRelays);
   });
 
-  it('should set Blossom server correctly', async () => {
-    const testServer = 'https://test-blossom.com';
-
-    await configManager.setBlossomServer(testServer);
+  it('should set Blossom servers correctly', async () => {
+    const testServers = ['https://test-server.com', 'https://backup-server.com'];
+    await configManager.setBlossomServers(testServers);
     const config = configManager.getConfig();
-
-    expect(config.blossom?.serverUrl).toBe(testServer);
+    expect(config.blossom?.servers).toEqual(testServers);
   });
 });

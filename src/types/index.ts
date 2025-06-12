@@ -5,7 +5,7 @@ export interface NostrConfig {
 }
 
 export interface BlossomConfig {
-  serverUrl: string;
+  servers: string[];
   apiKey?: string;
 }
 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as path from 'path';
-import { BlossomManager } from './blossom';
+import { BlossomFileResult, BlossomManager } from './blossom';
 import { ConfigManager } from './config';
 import { NostrManager, StaticFileInfo } from './nostr';
 
@@ -17,6 +17,7 @@ export interface DeploymentResult {
   };
   deployedAt: Date;
   fileCount: number;
+  blossomResults: { [filename: string]: BlossomFileResult };
 }
 
 export class DeploymentManager {
@@ -47,34 +48,59 @@ export class DeploymentManager {
     const npubSubdomain = await this.nostr.getNpubSubdomain();
     console.log(`🌐 Subdomain: ${npubSubdomain}.nostrdeploy.com`);
 
-    // Step 3: Upload files to Blossom
-    console.log('📤 Uploading files to Blossom server...');
+    // Step 3: Upload files to Blossom servers
+    console.log('📤 Uploading files to Blossom servers...');
     const uploadResults = await this.blossom.uploadDirectory(buildDirectory);
 
     // Step 4: Create static file info for Nostr events
     console.log('📋 Preparing static file events...');
     const staticFiles: StaticFileInfo[] = [];
 
-    for (const [filePath, uploadResult] of Object.entries(uploadResults)) {
-      // Convert file path to absolute path as required by NIP
-      const absolutePath = this.normalizeFilePath(filePath);
-      staticFiles.push({
-        path: absolutePath,
-        sha256: uploadResult.sha256,
-      });
+    for (const [filePath, blossomResult] of Object.entries(uploadResults)) {
+      if (blossomResult.hasSuccess) {
+        // Convert file path to absolute path as required by NIP
+        const absolutePath = this.normalizeFilePath(filePath);
+        staticFiles.push({
+          path: absolutePath,
+          sha256: blossomResult.sha256,
+        });
+      } else {
+        console.warn(
+          `⚠️  Skipping ${filePath} from Nostr events - failed to upload to any Blossom server`
+        );
+      }
     }
 
-    // Step 5: Get Blossom server info
+    if (staticFiles.length === 0) {
+      throw new Error('No files were successfully uploaded to any Blossom server');
+    }
+
+    // Step 5: Get successful Blossom servers for Nostr event
     const config = await this.getConfig();
     const userConfig = config.getConfig();
-    const blossomServer = userConfig.blossom?.serverUrl || 'https://cdn.hzrd149.com';
+    const configuredServers = userConfig.blossom?.servers || ['https://cdn.hzrd149.com'];
+
+    // Only include servers that had at least one successful upload
+    const successfulServers = new Set<string>();
+    Object.values(uploadResults).forEach((result) => {
+      result.serverResults.forEach((serverResult) => {
+        if (serverResult.success) {
+          successfulServers.add(serverResult.server);
+        }
+      });
+    });
+
+    const blossomServers = Array.from(successfulServers);
+    if (blossomServers.length === 0) {
+      throw new Error('No Blossom servers had successful uploads');
+    }
 
     // Step 6: Publish to Nostr according to Pubkey Static Websites NIP
     console.log('📡 Publishing to Nostr using Pubkey Static Websites NIP...');
     const nostrResult = await this.nostr.publishDeploymentMetadata({
       npubSubdomain,
       files: staticFiles,
-      blossomServers: [blossomServer],
+      blossomServers,
     });
 
     console.log('✅ Deployment completed successfully!');
@@ -86,6 +112,7 @@ export class DeploymentManager {
       userServersEventResult: nostrResult.userServersEventResult,
       deployedAt: new Date(),
       fileCount: staticFiles.length,
+      blossomResults: uploadResults,
     };
   }
 

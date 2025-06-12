@@ -77,11 +77,13 @@ export async function infoCommand(): Promise<void> {
     }
 
     console.log(chalk.white('\nDeployment Configuration:'));
-    if (userConfig.blossom?.serverUrl) {
-      console.log(chalk.white('  🌸 Blossom Server: ') + chalk.green('✅ Configured'));
-      console.log(chalk.white('    URL: ') + chalk.gray(userConfig.blossom.serverUrl));
+    if (userConfig.blossom?.servers && userConfig.blossom.servers.length > 0) {
+      console.log(chalk.white('  🌸 Blossom Servers: ') + chalk.green('✅ Configured'));
+      userConfig.blossom.servers.forEach((server, index) => {
+        console.log(chalk.white(`    ${index + 1}. `) + chalk.gray(server));
+      });
     } else {
-      console.log(chalk.white('  🌸 Blossom Server: ') + chalk.red('❌ Not configured'));
+      console.log(chalk.white('  🌸 Blossom Servers: ') + chalk.red('❌ Not configured'));
     }
 
     if (userConfig.deployment?.baseDomain) {
@@ -108,9 +110,9 @@ export async function infoCommand(): Promise<void> {
           chalk.white('  • Set up authentication: ') + chalk.green('nostr-deploy-cli auth')
         );
       }
-      if (!userConfig.blossom?.serverUrl) {
+      if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
         console.log(
-          chalk.white('  • Configure Blossom server: ') + chalk.green('nostr-deploy-cli config')
+          chalk.white('  • Configure Blossom servers: ') + chalk.green('nostr-deploy-cli config')
         );
       }
     }
