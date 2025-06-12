@@ -37,13 +37,17 @@ export class BlossomManager {
   private async getConfig(): Promise<ConfigManager> {
     if (!this.config) {
       this.config = await ConfigManager.getInstance();
-      const userConfig = this.config.getConfig();
-      this.servers = userConfig.blossom?.servers || ['https://cdn.hzrd149.com'];
     }
+    // Always refresh servers from config to pick up any changes
+    const userConfig = this.config.getConfig();
+    this.servers = userConfig.blossom?.servers || ['https://cdn.hzrd149.com'];
     return this.config;
   }
 
   public async uploadFiles(filePaths: string[]): Promise<BlossomFileResult[]> {
+    // Ensure config is loaded before uploading
+    await this.getConfig();
+
     const results: BlossomFileResult[] = [];
 
     // Upload files in parallel for better performance
@@ -327,6 +331,9 @@ export class BlossomManager {
     if (!(await fs.pathExists(dirPath))) {
       throw new Error(`Directory not found: ${dirPath}`);
     }
+
+    // Ensure config is loaded before uploading
+    await this.getConfig();
 
     const files = await this.getAllFiles(dirPath);
     const results: { [filename: string]: BlossomFileResult } = {};
