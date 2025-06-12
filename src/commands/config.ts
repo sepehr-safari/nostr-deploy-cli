@@ -96,7 +96,9 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
             type: 'input',
             name: 'relayUrls',
             message: 'Enter Nostr relay URLs (comma-separated):',
-            default: currentConfig.nostr?.relays?.join(', ') || 'wss://relay.nostr.band',
+            default:
+              currentConfig.nostr?.relays?.join(', ') ||
+              'wss://relay.nostr.band,wss://nostrue.com,wss://relay.damus.io,wss://purplerelay.com,wss://relay.primal.net',
             filter: (input: string) => input.split(',').map((r) => r.trim()),
             validate: (input: string[]) => {
               if (input.length === 0) return 'Please enter at least one relay URL';
@@ -125,7 +127,14 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
             type: 'input',
             name: 'servers',
             message: 'Enter Blossom server URLs (comma-separated):',
-            default: (currentConfig.blossom?.servers || ['https://cdn.hzrd149.com']).join(', '),
+            default: (
+              currentConfig.blossom?.servers || [
+                'https://cdn.hzrd149.com',
+                'https://blossom.primal.net',
+                'https://blossom.band',
+                'https://blossom.f7z.io',
+              ]
+            ).join(', '),
             validate: (input: string) => {
               const servers = input
                 .split(',')

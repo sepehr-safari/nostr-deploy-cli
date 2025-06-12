@@ -78,7 +78,12 @@ export class DeploymentManager {
     // Step 5: Get successful Blossom servers for Nostr event
     const config = await this.getConfig();
     const userConfig = config.getConfig();
-    const configuredServers = userConfig.blossom?.servers || ['https://cdn.hzrd149.com'];
+    const configuredServers = userConfig.blossom?.servers || [
+      'https://cdn.hzrd149.com',
+      'https://blossom.primal.net',
+      'https://blossom.band',
+      'https://blossom.f7z.io',
+    ];
 
     // Only include servers that had at least one successful upload
     const successfulServers = new Set<string>();

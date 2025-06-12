@@ -41,13 +41,23 @@ async function performAutoSetup(): Promise<void> {
 
       // Still ensure other configuration is set up with defaults if missing
       if (!userConfig.nostr?.relays || userConfig.nostr.relays.length === 0) {
-        const defaultRelays = ['wss://relay.nostr.band'];
+        const defaultRelays = [
+          'wss://relay.nostr.band',
+          'wss://nostrue.com',
+          'wss://relay.damus.io',
+          'wss://purplerelay.com',
+          'wss://relay.primal.net',
+        ];
         await config.setNostrRelays(defaultRelays);
         console.log(chalk.green('✅ Set up default Nostr relays'));
       }
 
       if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
-        await config.setBlossomServers(['https://blossom.primal.net']);
+        await config.setBlossomServers([
+          'https://blossom.primal.net',
+          'https://blossom.band',
+          'https://blossom.f7z.io',
+        ]);
         console.log(chalk.green('✅ Set up default Blossom servers'));
       }
 
@@ -79,13 +89,23 @@ async function performAutoSetup(): Promise<void> {
   await config.setNostrKey(keyPair.privateKey, keyPair.publicKey);
 
   // Set up minimal configuration with defaults
-  const defaultRelays = ['wss://relay.nostr.band'];
+  const defaultRelays = [
+    'wss://relay.nostr.band',
+    'wss://nostrue.com',
+    'wss://relay.damus.io',
+    'wss://purplerelay.com',
+    'wss://relay.primal.net',
+  ];
   await config.setNostrRelays(defaultRelays);
 
   // Set up minimal blossom config with a default server
   const userConfig = config.getConfig();
   if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
-    await config.setBlossomServers(['https://blossom.primal.net']);
+    await config.setBlossomServers([
+      'https://blossom.primal.net',
+      'https://blossom.band',
+      'https://blossom.f7z.io',
+    ]);
   }
 
   // Set up default domain if not configured

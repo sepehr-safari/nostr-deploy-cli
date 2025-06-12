@@ -28,7 +28,12 @@ export interface BlossomFileResult {
 
 export class BlossomManager {
   private config: ConfigManager | null = null;
-  private servers: string[] = ['https://cdn.hzrd149.com'];
+  private servers: string[] = [
+    'https://cdn.hzrd149.com',
+    'https://blossom.primal.net',
+    'https://blossom.band',
+    'https://blossom.f7z.io',
+  ];
 
   constructor() {
     // Initialize with default servers, will be updated when config is loaded
@@ -40,7 +45,12 @@ export class BlossomManager {
     }
     // Always refresh servers from config to pick up any changes
     const userConfig = this.config.getConfig();
-    this.servers = userConfig.blossom?.servers || ['https://cdn.hzrd149.com'];
+    this.servers = userConfig.blossom?.servers || [
+      'https://cdn.hzrd149.com',
+      'https://blossom.primal.net',
+      'https://blossom.band',
+      'https://blossom.f7z.io',
+    ];
     return this.config;
   }
 
