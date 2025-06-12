@@ -88,30 +88,80 @@ export class NostrManager {
     }
 
     // Publish to each relay individually and collect results
-    const relayResults = await Promise.all(
+    const relayResults = await Promise.allSettled(
       relays.map(async (relay) => {
         try {
-          await this.pool.publish([relay], event);
+          const publishPromises = this.pool.publish([relay], event);
+          // Wait for all publish promises to resolve/reject
+          await Promise.all(publishPromises);
           return { relay, success: true };
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           return {
             relay,
             success: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage,
           };
         }
       })
     );
 
+    // Process the settled results
+    const processedResults = relayResults.map((result, index) => {
+      const relay = relays[index];
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        // Handle rejected promises (uncaught errors)
+        const errorMessage =
+          result.reason instanceof Error ? result.reason.message : String(result.reason);
+
+        // Categorize common relay errors for better user feedback
+        let categorizedError = errorMessage;
+        if (
+          errorMessage.includes('pow:') ||
+          errorMessage.includes('POW') ||
+          errorMessage.includes('bits needed')
+        ) {
+          categorizedError = `POW required: ${errorMessage}`;
+        } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many')) {
+          categorizedError = `Rate limited: ${errorMessage}`;
+        } else if (errorMessage.includes('blocked') || errorMessage.includes('banned')) {
+          categorizedError = `Blocked: ${errorMessage}`;
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('TIMEOUT')) {
+          categorizedError = `Connection timeout: ${errorMessage}`;
+        }
+
+        return {
+          relay,
+          success: false,
+          error: categorizedError,
+        };
+      }
+    });
+
+    // Log relay results for debugging
+    const successCount = processedResults.filter((r) => r.success).length;
+    const totalCount = processedResults.length;
+
+    if (successCount < totalCount) {
+      console.log(`⚠️  Published to ${successCount}/${totalCount} relays`);
+      processedResults.forEach((result) => {
+        if (!result.success) {
+          console.log(`   ❌ ${result.relay}: ${result.error}`);
+        }
+      });
+    }
+
     // Check if at least one relay accepted the event
-    const hasSuccess = relayResults.some((result) => result.success);
+    const hasSuccess = processedResults.some((result) => result.success);
     if (!hasSuccess) {
       throw new Error('Failed to publish event to any relay');
     }
 
     return {
       eventId: event.id,
-      relayResults,
+      relayResults: processedResults,
     };
   }
 
