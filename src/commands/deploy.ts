@@ -54,6 +54,7 @@ async function performAutoSetup(): Promise<void> {
 
       if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
         await config.setBlossomServers([
+          'https://cdn.hzrd149.com',
           'https://blossom.primal.net',
           'https://blossom.band',
           'https://blossom.f7z.io',
@@ -102,6 +103,7 @@ async function performAutoSetup(): Promise<void> {
   const userConfig = config.getConfig();
   if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
     await config.setBlossomServers([
+      'https://cdn.hzrd149.com',
       'https://blossom.primal.net',
       'https://blossom.band',
       'https://blossom.f7z.io',
