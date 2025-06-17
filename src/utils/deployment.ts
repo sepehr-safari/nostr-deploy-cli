@@ -38,22 +38,16 @@ export class DeploymentManager {
   }
 
   public async deployStaticSite(buildDirectory: string): Promise<DeploymentResult> {
-    console.log('🚀 Starting deployment process...');
-
     // Step 1: Validate build directory
     await this.validateBuildDirectory(buildDirectory);
 
     // Step 2: Get npub subdomain
-    console.log('🔑 Generating npub subdomain...');
     const npubSubdomain = await this.nostr.getNpubSubdomain();
-    console.log(`🌐 Subdomain: ${npubSubdomain}.nostrdeploy.com`);
 
     // Step 3: Upload files to Blossom servers
-    console.log('📤 Uploading files to Blossom servers...');
     const uploadResults = await this.blossom.uploadDirectory(buildDirectory);
 
     // Step 4: Create static file info for Nostr events
-    console.log('📋 Preparing static file events...');
     const staticFiles: StaticFileInfo[] = [];
 
     for (const [filePath, blossomResult] of Object.entries(uploadResults)) {
@@ -64,10 +58,6 @@ export class DeploymentManager {
           path: absolutePath,
           sha256: blossomResult.sha256,
         });
-      } else {
-        console.warn(
-          `⚠️  Skipping ${filePath} from Nostr events - failed to upload to any Blossom server`
-        );
       }
     }
 
@@ -101,14 +91,11 @@ export class DeploymentManager {
     }
 
     // Step 6: Publish to Nostr according to Pubkey Static Websites NIP
-    console.log('📡 Publishing to Nostr using Pubkey Static Websites NIP...');
     const nostrResult = await this.nostr.publishDeploymentMetadata({
       npubSubdomain,
       files: staticFiles,
       blossomServers,
     });
-
-    console.log('✅ Deployment completed successfully!');
 
     return {
       npubSubdomain,

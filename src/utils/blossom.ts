@@ -358,27 +358,21 @@ export class BlossomManager {
       const relativePath = result.filename.replace(dirPath + '/', '').replace(dirPath + '\\', '');
       results[relativePath] = result;
 
-      // Log upload status for each file
-      if (result.hasSuccess) {
-        const successCount = result.serverResults.filter((r) => r.success).length;
-        const totalCount = result.serverResults.length;
-        if (successCount === totalCount) {
-          console.log(`  ✅ ${relativePath}: Uploaded to all ${totalCount} servers`);
-        } else {
-          console.log(`  ⚠️  ${relativePath}: Uploaded to ${successCount}/${totalCount} servers`);
-          result.serverResults.forEach((serverResult) => {
-            if (!serverResult.success) {
-              console.log(`     ❌ ${serverResult.server}: ${serverResult.error}`);
-            }
-          });
-        }
-      } else {
+      // Just track success/failure, don't log per-file details
+      if (!result.hasSuccess) {
         console.log(`  ❌ ${relativePath}: Failed to upload to any server`);
-        result.serverResults.forEach((serverResult) => {
-          console.log(`     ❌ ${serverResult.server}: ${serverResult.error}`);
-        });
       }
     });
+
+    // Show upload summary
+    const successfulFiles = uploadResults.filter(r => r.hasSuccess).length;
+    const failedFiles = uploadResults.length - successfulFiles;
+    
+    if (failedFiles === 0) {
+      console.log(`✅ Successfully uploaded all ${successfulFiles} files`);
+    } else {
+      console.log(`⚠️  Uploaded ${successfulFiles}/${uploadResults.length} files (${failedFiles} failed)`);
+    }
 
     return results;
   }
