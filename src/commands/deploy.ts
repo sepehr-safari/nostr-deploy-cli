@@ -44,7 +44,6 @@ async function performAutoSetup(): Promise<void> {
         const defaultRelays = [
           'wss://relay.nostr.band',
           'wss://nostrue.com',
-          'wss://relay.damus.io',
           'wss://purplerelay.com',
           'wss://relay.primal.net',
         ];
@@ -93,7 +92,6 @@ async function performAutoSetup(): Promise<void> {
   const defaultRelays = [
     'wss://relay.nostr.band',
     'wss://nostrue.com',
-    'wss://relay.damus.io',
     'wss://purplerelay.com',
     'wss://relay.primal.net',
   ];
