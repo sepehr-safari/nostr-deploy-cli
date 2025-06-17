@@ -98,7 +98,7 @@ export async function configCommand(options: ConfigOptions): Promise<void> {
             message: 'Enter Nostr relay URLs (comma-separated):',
             default:
               currentConfig.nostr?.relays?.join(', ') ||
-              'wss://relay.nostr.band,wss://nostrue.com,wss://relay.damus.io,wss://purplerelay.com,wss://relay.primal.net',
+              'wss://relay.nostr.band,wss://nostrue.com,wss://purplerelay.com,wss://relay.primal.net',
             filter: (input: string) => input.split(',').map((r) => r.trim()),
             validate: (input: string[]) => {
               if (input.length === 0) return 'Please enter at least one relay URL';

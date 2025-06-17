@@ -191,7 +191,7 @@ export async function authCommand(options: AuthOptions): Promise<void> {
           name: 'relays',
           message: 'Enter relay URLs (comma-separated):',
           default:
-            'wss://relay.nostr.band,wss://nostrue.com,wss://relay.damus.io,wss://purplerelay.com,wss://relay.primal.net',
+            'wss://relay.nostr.band,wss://nostrue.com,wss://purplerelay.com,wss://relay.primal.net',
           filter: (input: string) => input.split(',').map((r) => r.trim()),
         },
       ]);
