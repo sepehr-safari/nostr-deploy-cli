@@ -11,8 +11,6 @@ async function performAutoSetup(): Promise<void> {
   const config = await ConfigManager.getInstance();
   const nostr = new NostrManager();
 
-  console.log(chalk.cyan('\n🔐 Skip-setup mode: Checking for existing configuration...\n'));
-
   // Check if there's already local configuration
   const hasLocalConfig = await config.hasLocalConfig();
 
@@ -21,23 +19,7 @@ async function performAutoSetup(): Promise<void> {
 
     // Check if we have existing auth configuration (either private key or public key)
     if (userConfig.nostr?.publicKey || userConfig.nostr?.privateKey) {
-      console.log(chalk.green('✅ Found existing authentication configuration!'));
-
-      if (userConfig.nostr.privateKey) {
-        console.log(chalk.blue('🔑 Reusing existing private key for deployment'));
-        // Try to get the npub for display
-        try {
-          const npub = await nostr.getNpubSubdomain();
-          console.log(chalk.white('Public Key (npub): ') + chalk.blue(npub));
-        } catch (error) {
-          console.log(
-            chalk.yellow('⚠️  Could not display npub, but proceeding with existing keys')
-          );
-        }
-      } else if (userConfig.nostr.publicKey) {
-        console.log(chalk.blue('🔍 Reusing existing public key (read-only mode)'));
-        console.log(chalk.yellow('⚠️  Note: Public key only - cannot sign new deployments'));
-      }
+      console.log(chalk.green('✅ Using existing configuration'));
 
       // Still ensure other configuration is set up with defaults if missing
       if (!userConfig.nostr?.relays || userConfig.nostr.relays.length === 0) {
@@ -49,7 +31,6 @@ async function performAutoSetup(): Promise<void> {
           'wss://relay.primal.net',
         ];
         await config.setNostrRelays(defaultRelays);
-        console.log(chalk.green('✅ Set up default Nostr relays'));
       }
 
       if (!userConfig.blossom?.servers || userConfig.blossom.servers.length === 0) {
@@ -59,23 +40,18 @@ async function performAutoSetup(): Promise<void> {
           'https://blossom.band',
           'https://blossom.f7z.io',
         ]);
-        console.log(chalk.green('✅ Set up default Blossom servers'));
       }
 
       if (!userConfig.deployment?.baseDomain) {
         await config.setBaseDomain('nostrdeploy.com');
-        console.log(chalk.green('✅ Set up default base domain'));
       }
 
-      console.log(chalk.green('✅ Existing configuration ready for deployment!'));
       return;
     }
   }
 
   // No existing auth config found, generate new keypair
-  console.log(
-    chalk.yellow('⚡ No existing auth config found - auto-generating new Nostr keypair...\n')
-  );
+  console.log(chalk.yellow('⚡ Generating new Nostr keypair...'));
 
   // Generate new keypair
   const keyPair = nostr.generateKeyPair();
@@ -114,8 +90,6 @@ async function performAutoSetup(): Promise<void> {
   if (!userConfig.deployment?.baseDomain) {
     await config.setBaseDomain('nostrdeploy.com');
   }
-
-  console.log(chalk.green('✅ Auto-configuration complete!'));
 }
 
 export async function deployCommand(options: DeployOptions): Promise<void> {
@@ -126,12 +100,8 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
   try {
     console.log(chalk.cyan('\n🚀 Starting Deployment\n'));
 
-    const projectName = path.basename(process.cwd());
-    console.log(chalk.white('Project: ') + chalk.yellow(projectName));
-
     // Handle skip-setup flag
     if (options.skipSetup) {
-      console.log(chalk.yellow('⚡ Skip-setup mode enabled - auto-configuring...'));
       await performAutoSetup();
     } else {
       // Check if user is authenticated and configured
@@ -216,8 +186,6 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       return;
     }
 
-    console.log(chalk.blue(`📁 Using build directory: ${buildDir}`));
-
     // Validate build directory
     if (!(await fs.pathExists(buildDir))) {
       console.log(chalk.red(`❌ Build directory not found: ${buildDir}`));
@@ -249,7 +217,7 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       return;
     }
 
-    console.log(chalk.blue(`📄 Found ${files.length} files to deploy`));
+    console.log(chalk.blue(`📄 Deploying ${files.length} files from ${buildDir}`));
 
     // Start deployment
     spinner = ora('Preparing deployment...').start();
@@ -260,67 +228,9 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       spinner.succeed('Deployment completed successfully!');
 
       console.log(chalk.green('\n🎉 Deployment Successful!\n'));
-      console.log(chalk.white('Deployment Details:'));
       console.log(chalk.white('  🌐 URL: ') + chalk.cyan(`https://${result.fullUrl}`));
-      console.log(chalk.white('  🔑 NPub Subdomain: ') + chalk.blue(result.npubSubdomain));
-      console.log(chalk.white('  📅 Deployed: ') + chalk.gray(result.deployedAt.toLocaleString()));
       console.log(chalk.white('  📁 Files: ') + chalk.yellow(result.fileCount.toString()));
-
-      if (result.staticFileEventResults && result.staticFileEventResults.length > 0) {
-        console.log(chalk.white('  📡 Static File Events:'));
-        result.staticFileEventResults.forEach((eventResult, index: number) => {
-          console.log(
-            chalk.white(`    ${index + 1}. `) +
-              chalk.gray(eventResult.eventId.substring(0, 16) + '...')
-          );
-          // Show relay status for each event
-          const successCount = eventResult.relayResults.filter((r) => r.success).length;
-          const totalCount = eventResult.relayResults.length;
-          if (successCount === totalCount) {
-            console.log(chalk.white(`       ✅ Published to all ${totalCount} relays`));
-          } else {
-            console.log(
-              chalk.yellow(`       ⚠️  Published to ${successCount}/${totalCount} relays`)
-            );
-            eventResult.relayResults.forEach((result) => {
-              if (!result.success) {
-                console.log(chalk.red(`         ❌ ${result.relay}: ${result.error}`));
-              }
-            });
-          }
-        });
-      }
-
-      if (result.userServersEventResult) {
-        console.log(
-          chalk.white('  🌸 User Servers Event: ') +
-            chalk.gray(result.userServersEventResult.eventId.substring(0, 16) + '...')
-        );
-        // Show relay status for user servers event
-        const successCount = result.userServersEventResult.relayResults.filter(
-          (r) => r.success
-        ).length;
-        const totalCount = result.userServersEventResult.relayResults.length;
-        if (successCount === totalCount) {
-          console.log(chalk.white(`       ✅ Published to all ${totalCount} relays`));
-        } else {
-          console.log(chalk.yellow(`       ⚠️  Published to ${successCount}/${totalCount} relays`));
-          result.userServersEventResult.relayResults.forEach((result) => {
-            if (!result.success) {
-              console.log(chalk.red(`         ❌ ${result.relay}: ${result.error}`));
-            }
-          });
-        }
-      }
-
-      console.log(chalk.cyan('\n📖 About this deployment:'));
-      console.log(
-        chalk.white('Your site is deployed using the Pubkey Static Websites NIP standard.')
-      );
-      console.log(
-        chalk.white('Each file is published as a kind 34128 event with path and hash information.')
-      );
-      console.log(chalk.white('Your npub serves as your unique subdomain identifier.'));
+      console.log(chalk.white('  📅 Deployed: ') + chalk.gray(result.deployedAt.toLocaleString()));
 
       // Exit successfully after deployment
       process.exit(0);

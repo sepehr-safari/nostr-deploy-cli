@@ -140,17 +140,11 @@ export class NostrManager {
       }
     });
 
-    // Log relay results for debugging
+    // Only log if no relays succeeded (critical error)
     const successCount = processedResults.filter((r) => r.success).length;
-    const totalCount = processedResults.length;
-
-    if (successCount < totalCount) {
-      console.log(`⚠️  Published to ${successCount}/${totalCount} relays`);
-      processedResults.forEach((result) => {
-        if (!result.success) {
-          console.log(`   ❌ ${result.relay}: ${result.error}`);
-        }
-      });
+    
+    if (successCount === 0) {
+      console.log(`❌ Failed to publish to any relays`);
     }
 
     // Check if at least one relay accepted the event
@@ -265,10 +259,7 @@ export class NostrManager {
       relayResults: { relay: string; success: boolean; error?: string }[];
     };
   }> {
-    console.log('📡 Publishing static file events (kind 34128)...');
     const staticFileEventResults = await this.publishStaticFileEvents(deploymentInfo.files);
-
-    console.log('📡 Publishing user servers event (kind 10063)...');
     const userServersEventResult = await this.publishUserServersEvent(
       deploymentInfo.blossomServers
     );
