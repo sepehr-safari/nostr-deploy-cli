@@ -1,6 +1,6 @@
 {
   "name": "nostr-deploy-cli",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "A CLI tool for deploying static sites using Nostr protocol and Blossom servers to nostrdeploy.com subdomains",
   "main": "dist/index.js",
   "bin": {
@@ -27,10 +27,10 @@
   "homepage": "https://nostrdeploy.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/nostr-deploy-cli.git"
+    "url": "https://github.com/sepehr-safari/nostr-deploy-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/nostr-deploy-cli/issues"
+    "url": "https://github.com/sepehr-safari/nostr-deploy-cli/issues"
   },
   "dependencies": {
     "acme-client": "^5.0.0",
